@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const TestCodeGenerator = () => {
   const [formData, setFormData] = useState({
@@ -88,6 +90,8 @@ const TestCodeGenerator = () => {
         framework.includes('Protractor') || framework.includes('TestCafe') ||
         framework.includes('Detox')) return 'javascript';
     if (framework.includes('C#') || framework.includes('NUnit')) return 'csharp';
+    if (framework.includes('Robot Framework')) return 'robotframework';
+    if (framework.includes('Cucumber')) return 'gherkin';
     return 'javascript'; // Default
   };
 
@@ -166,13 +170,23 @@ const TestCodeGenerator = () => {
             {error}
           </div>
         )}
-        <div className="max-h-[50vh] overflow-auto bg-gray-800 border border-gray-700 p-4 rounded-lg font-mono text-sm">
+        <div className="max-h-[50vh] overflow-auto bg-gray-800 border border-gray-700 rounded-lg">
           {result && (
-            <pre>
-              <code className={getLanguage()}>
-                {result}
-              </code>
-            </pre>
+            <SyntaxHighlighter 
+              language={getLanguage()} 
+              style={vscDarkPlus}
+              customStyle={{ 
+                margin: 0, 
+                padding: '1rem',
+                borderRadius: '0.5rem', 
+                backgroundColor: 'transparent',
+                fontSize: '0.875rem'
+              }}
+              wrapLines={true}
+              showLineNumbers={true}
+            >
+              {result}
+            </SyntaxHighlighter>
           )}
         </div>
         {result && (
