@@ -26,6 +26,7 @@ Objective: MVP of AI powered testing tools platform.
 - Smart suggestions for edge cases
 - Test quality insights
 - Natural language interface
+- Quality Assessment tool for projects based on implemented practices
 
 #### Additional ideas:
 - AI generates test cases from user interface

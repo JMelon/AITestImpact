@@ -48,6 +48,83 @@ app.post('/api/generate-test-cases', async (req, res) => {
   }
 });
 
+// API route for quality assessment
+app.post('/api/generate-quality-assessment', async (req, res) => {
+  try {
+    const { selectedPractices } = req.body;
+    
+    if (!selectedPractices) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const unselectedPractices = getUnselectedPractices(selectedPractices);
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-2025-04-14',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert software quality consultant. Analyze the provided software quality practices to create a tailored assessment report. Include strengths in the selected practices, identify gaps from unselected practices, and provide 3-5 specific, actionable recommendations to improve the quality posture. Format your response with clear sections for Strengths, Gaps, and Recommendations. Be concise but insightful.'
+        },
+        {
+          role: 'user',
+          content: `Generate a quality assessment based on these selected practices: ${JSON.stringify(selectedPractices)} and these unselected practices: ${JSON.stringify(unselectedPractices)}.`
+        }
+      ]
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return res.json(response.data);
+  } catch (error) {
+    console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
+    return res.status(500).json({ 
+      error: 'Error generating quality assessment', 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
+// Helper function to determine unselected practices
+function getUnselectedPractices(selectedPractices) {
+  const allPractices = [
+    "Unit tests", "Integration tests", "Contract tests", "End-to-end tests", 
+    "Exploratory testing", "Automated regression tests", "Load testing", 
+    "Stress testing", "Performance testing", "Security testing", 
+    "Static code analysis", "Dynamic code analysis", "Code reviews", 
+    "Pair programming", "TDD (Test-Driven Development)", 
+    "BDD (Behavior-Driven Development)", "CI (Continuous Integration)", 
+    "CD (Continuous Delivery)", "Quality gates in pipelines", "Linting tools", 
+    "Code coverage tracking", "Feature flags", "Monitoring in production", 
+    "Observability tools", "Logging strategy", "Alerting strategy", 
+    "Rollback strategy", "Canary releases", "Blue/Green deployments", 
+    "Infrastructure as Code", "Containerization (e.g., Docker)", 
+    "Orchestration (e.g., Kubernetes)", "Automated test environments", 
+    "Synthetic testing", "Chaos engineering", "Risk-based testing", 
+    "Flaky test management", "Test data management", "Accessibility testing", 
+    "Cross-browser testing", "Mobile testing", "Quality coaching", 
+    "QA in planning/refinement sessions", "Shift-left testing", 
+    "Shift-right testing", "Bug tracking system", "Root cause analysis practices", 
+    "Definition of Done includes quality criteria", "Clean code practices", 
+    "Technical debt management", "Security audits", 
+    "Dependency vulnerability scanning", "Privacy by design", 
+    "Ethical considerations in software", "Compliance testing", 
+    "Documentation for testing strategies", "Test reporting dashboards", 
+    "Test case versioning", "Manual test scripts maintained", 
+    "Automated test reports", "Dedicated QA environments", 
+    "Continuous testing strategy", "Quality KPIs tracked", 
+    "Regression suite execution in pipelines", "AI-based test automation", 
+    "Visual testing", "Smoke tests", "Sanity checks", 
+    "Test tagging and filtering", "Test parallelization", 
+    "Developer ownership of quality"
+  ];
+  
+  return allPractices.filter(practice => !selectedPractices.includes(practice));
+}
+
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('client/build'));

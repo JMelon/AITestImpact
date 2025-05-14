@@ -1,0 +1,148 @@
+.quality-assessment {
+  margin: 20px 0;
+}
+
+.assessment-container {
+  display: flex;
+  gap: 30px;
+  flex-direction: column;
+}
+
+@media (min-width: 1200px) {
+  .assessment-container {
+    flex-direction: row;
+  }
+
+  .checkbox-section, .result-section {
+    flex: 1;
+  }
+}
+
+.checkbox-section, .result-section {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.checkbox-section h3, .result-section h3 {
+  margin-top: 0;
+  text-align: left;
+}
+
+.category-section {
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: white;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.category-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.toggle-button {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+}
+
+.toggle-button:hover {
+  background-color: #f0f0f0;
+}
+
+.practices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+
+.practice-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.practice-checkbox input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.practice-checkbox label {
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.selection-info {
+  margin-bottom: 10px;
+  color: #666;
+}
+
+.generate-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background-color 0.3s;
+  width: 100%;
+  max-width: 300px;
+}
+
+.generate-btn:hover {
+  background-color: #45a049;
+}
+
+.generate-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.result-content {
+  background-color: white;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  min-height: 300px;
+  text-align: left;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  text-align: left;
+}
