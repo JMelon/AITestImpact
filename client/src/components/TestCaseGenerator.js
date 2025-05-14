@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import './TestCaseGenerator.css';
 
 const TestCaseGenerator = () => {
   const [formData, setFormData] = useState({
@@ -41,71 +40,92 @@ const TestCaseGenerator = () => {
   };
 
   return (
-    <div className="test-case-generator">
-      <div className="generator-container">
-        <div className="input-section">
-          <form onSubmit={onSubmit}>
-            <div className="form-group">
-              <label htmlFor="acceptanceCriteria">Acceptance Criteria:</label>
-              <textarea
-                id="acceptanceCriteria"
-                name="acceptanceCriteria"
-                value={acceptanceCriteria}
-                onChange={onChange}
-                placeholder="Enter the acceptance criteria here..."
-                rows="10"
-                required
-              ></textarea>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="outputType">Output Format:</label>
-                <select
-                  id="outputType"
-                  name="outputType"
-                  value={outputType}
-                  onChange={onChange}
-                >
-                  <option value="Procedural">Procedural</option>
-                  <option value="Gherkin">Gherkin</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="language">Language:</label>
-                <select
-                  id="language"
-                  name="language"
-                  value={language}
-                  onChange={onChange}
-                >
-                  <option value="English">English</option>
-                  <option value="Portuguese">Portuguese</option>
-                  <option value="Spanish">Spanish</option>
-                  <option value="French">French</option>
-                  <option value="German">German</option>
-                </select>
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              className="generate-btn"
-              disabled={loading || !acceptanceCriteria}
-            >
-              {loading ? 'Generating...' : 'Generate Test Cases'}
-            </button>
-          </form>
-        </div>
-
-        <div className="result-section">
-          <h3>Generated Test Cases</h3>
-          {loading && <div className="loading">Generating test cases, please wait...</div>}
-          {error && <div className="error">{error}</div>}
-          <div className="result-content">
-            {result && <ReactMarkdown>{result}</ReactMarkdown>}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-gray-900 rounded-xl p-6">
+        <h3 className="text-xl font-semibold mb-6">Generate Test Cases</h3>
+        <form onSubmit={onSubmit}>
+          <div className="mb-6">
+            <label htmlFor="acceptanceCriteria" className="block text-sm font-medium mb-2">
+              Acceptance Criteria:
+            </label>
+            <textarea
+              id="acceptanceCriteria"
+              name="acceptanceCriteria"
+              value={acceptanceCriteria}
+              onChange={onChange}
+              placeholder="Enter the acceptance criteria here..."
+              className="w-full h-56 bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              required
+            ></textarea>
           </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <label htmlFor="outputType" className="block text-sm font-medium mb-2">
+                Output Format:
+              </label>
+              <select
+                id="outputType"
+                name="outputType"
+                value={outputType}
+                onChange={onChange}
+                className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="Procedural">Procedural</option>
+                <option value="Gherkin">Gherkin</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="language" className="block text-sm font-medium mb-2">
+                Language:
+              </label>
+              <select
+                id="language"
+                name="language"
+                value={language}
+                onChange={onChange}
+                className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="English">English</option>
+                <option value="Portuguese">Portuguese</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+              </select>
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            className={`w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors ${
+              loading || !acceptanceCriteria ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={loading || !acceptanceCriteria}
+          >
+            {loading ? 'Generating...' : 'Generate Test Cases'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-gray-900 rounded-xl p-6">
+        <h3 className="text-xl font-semibold mb-6">Generated Test Cases</h3>
+        {loading && (
+          <div className="flex items-center justify-center h-56 text-gray-400">
+            <div className="animate-pulse">Generating test cases, please wait...</div>
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+        <div className="h-56 overflow-auto bg-gray-800 border border-gray-700 p-4 rounded-lg">
+          {result && (
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown>{result}</ReactMarkdown>
+            </div>
+          )}
         </div>
       </div>
     </div>

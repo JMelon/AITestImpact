@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import './QualityAssessment.css';
 
 const QualityAssessment = () => {
   const [loading, setLoading] = useState(false);
@@ -151,65 +150,78 @@ const QualityAssessment = () => {
   };
 
   return (
-    <div className="quality-assessment">
-      <div className="assessment-container">
-        <div className="checkbox-section">
-          <h3>Select Quality Practices in Your Project</h3>
-          <p>Check all the practices, technologies, and tools that apply to your project:</p>
-          
-          <form onSubmit={handleSubmit}>
-            {Object.entries(categories).map(([category, practices]) => (
-              <div key={category} className="category-section">
-                <div className="category-header">
-                  <h4>{category}</h4>
-                  <button 
-                    type="button" 
-                    className="toggle-button"
-                    onClick={() => selectAllInCategory(category)}
-                  >
-                    Toggle All
-                  </button>
-                </div>
-                <div className="practices-grid">
-                  {practices.map(practice => (
-                    <div key={practice} className="practice-checkbox">
-                      <input
-                        type="checkbox"
-                        id={practice.replace(/\s/g, '-')}
-                        checked={selectedPractices.includes(practice)}
-                        onChange={() => handleCheckboxChange(practice)}
-                      />
-                      <label htmlFor={practice.replace(/\s/g, '-')}>
-                        {practice}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-gray-900 rounded-xl p-6">
+        <h3 className="text-xl font-semibold mb-6">Select Quality Practices</h3>
+        <form onSubmit={handleSubmit} className="overflow-auto max-h-[70vh]">
+          {Object.entries(categories).map(([category, practices]) => (
+            <div key={category} className="mb-4 bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700">
+                <h4 className="font-medium">{category}</h4>
+                <button 
+                  type="button" 
+                  className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded text-gray-300"
+                  onClick={() => selectAllInCategory(category)}
+                >
+                  Toggle All
+                </button>
               </div>
-            ))}
-            
-            <div className="controls">
-              <div className="selection-info">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {practices.map(practice => (
+                  <div key={practice} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={practice.replace(/\s/g, '-')}
+                      checked={selectedPractices.includes(practice)}
+                      onChange={() => handleCheckboxChange(practice)}
+                      className="mr-2 h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
+                    />
+                    <label htmlFor={practice.replace(/\s/g, '-')} className="text-sm">
+                      {practice}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          
+          <div className="sticky bottom-0 pt-4 pb-2 bg-gray-900">
+            <div className="flex flex-col gap-3">
+              <div className="text-sm text-gray-400 text-center">
                 Selected {selectedPractices.length} of {allPractices.length} practices
               </div>
               <button 
                 type="submit" 
-                className="generate-btn"
+                className={`w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors ${
+                  loading || selectedPractices.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 disabled={loading || selectedPractices.length === 0}
               >
                 {loading ? 'Generating...' : 'Generate Quality Assessment'}
               </button>
             </div>
-          </form>
-        </div>
-
-        <div className="result-section">
-          <h3>Quality Assessment</h3>
-          {loading && <div className="loading">Generating quality assessment, please wait...</div>}
-          {error && <div className="error">{error}</div>}
-          <div className="result-content">
-            {result && <ReactMarkdown>{result}</ReactMarkdown>}
           </div>
+        </form>
+      </div>
+
+      <div className="bg-gray-900 rounded-xl p-6">
+        <h3 className="text-xl font-semibold mb-6">Quality Assessment</h3>
+        {loading && (
+          <div className="flex items-center justify-center h-56 text-gray-400">
+            <div className="animate-pulse">Generating quality assessment, please wait...</div>
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+        <div className="h-[60vh] overflow-auto bg-gray-800 border border-gray-700 p-4 rounded-lg">
+          {result && (
+            <div className="prose prose-invert prose-sm max-w-none">
+              <ReactMarkdown>{result}</ReactMarkdown>
+            </div>
+          )}
         </div>
       </div>
     </div>

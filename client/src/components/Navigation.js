@@ -1,21 +1,28 @@
 import React from 'react';
-import './Navigation.css';
 
 const Navigation = ({ currentTool, setCurrentTool }) => {
   return (
-    <nav className="main-navigation">
-      <div className="nav-container">
+    <nav className="mt-4">
+      <div className="flex bg-gray-800 rounded-xl overflow-hidden">
         <button
-          className={`nav-button ${currentTool === 'testCaseGenerator' ? 'active' : ''}`}
+          className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors ${
+            currentTool === 'testCaseGenerator' 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
           onClick={() => setCurrentTool('testCaseGenerator')}
         >
-          Test Case Generator
+          <span>Test Case Generator</span>
         </button>
         <button
-          className={`nav-button ${currentTool === 'qualityAssessment' ? 'active' : ''}`}
+          className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors ${
+            currentTool === 'qualityAssessment' 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
           onClick={() => setCurrentTool('qualityAssessment')}
         >
-          Quality Assessment
+          <span>Quality Assessment</span>
         </button>
       </div>
     </nav>
