@@ -16,15 +16,35 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // API route for generating test cases
 app.post('/api/generate-test-cases', async (req, res) => {
   try {
-    const { acceptanceCriteria, outputType, language, imageData } = req.body;
+    const { acceptanceCriteria, outputType, language, imageData, swaggerUrl } = req.body;
     
-    if ((!acceptanceCriteria && !imageData) || !outputType || !language) {
+    if ((!acceptanceCriteria && !imageData && !swaggerUrl) || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     let messages = [];
     
-    if (imageData) {
+    if (swaggerUrl) {
+      // For Swagger-based test case generation
+      try {
+        // Fetch the Swagger JSON
+        const swaggerResponse = await axios.get(swaggerUrl);
+        const swaggerJson = JSON.stringify(swaggerResponse.data);
+        
+        messages = [
+          {
+            role: 'system',
+            content: 'You generate Test Cases based on Swagger/OpenAPI documentation. Analyze the API endpoints, their parameters, responses, and schemas to create comprehensive test cases. Focus on functional tests, edge cases, error handling, and data validation. It is really important that you do not use Gherkin if the user asked for Procedural. The Test Case should contain a title (starting with Validate or Verify, when it\'s possible) and a description. Also, every step needs an Expected Result. But if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+          },
+          {
+            role: 'user',
+            content: `Generate test cases in ${outputType} format for the API defined in the following Swagger/OpenAPI documentation: ${swaggerJson}. Use language: ${language}.`
+          }
+        ];
+      } catch (error) {
+        return res.status(400).json({ error: 'Failed to fetch Swagger JSON from provided URL' });
+      }
+    } else if (imageData) {
       // For image-based test case generation
       messages = [
         {

@@ -32,10 +32,10 @@ const TestCaseGenerator = () => {
   const [formData, setFormData] = useState({
     acceptanceCriteria: '',
     outputType: 'Procedural',
-    language: 'English'
+    language: 'English',
+    swaggerUrl: ''
   });
-  const [inputType, setInputType] = useState('text'); // 'text' or 'image'
-  // eslint-disable-next-line no-unused-vars
+  const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -44,7 +44,7 @@ const TestCaseGenerator = () => {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
-  const { acceptanceCriteria, outputType, language } = formData;
+  const { acceptanceCriteria, outputType, language, swaggerUrl } = formData;
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -159,6 +159,14 @@ const TestCaseGenerator = () => {
       if (inputType === 'image' && imagePreview) {
         requestData.imageData = imagePreview;
         requestData.acceptanceCriteria = ''; // Clear text input when sending image
+        requestData.swaggerUrl = ''; // Clear swagger URL when sending image
+      } else if (inputType === 'swagger') {
+        requestData.imageData = ''; // Clear image data when sending swagger URL
+        requestData.acceptanceCriteria = ''; // Clear text input when sending swagger URL
+      } else {
+        // Text input
+        requestData.imageData = ''; // Clear image data when sending text
+        requestData.swaggerUrl = ''; // Clear swagger URL when sending text
       }
 
       // Use the full URL to avoid proxy issues
@@ -180,6 +188,7 @@ const TestCaseGenerator = () => {
     if (loading) return true;
     if (inputType === 'text') return !acceptanceCriteria;
     if (inputType === 'image') return !imagePreview;
+    if (inputType === 'swagger') return !swaggerUrl;
     return true;
   };
 
@@ -190,7 +199,7 @@ const TestCaseGenerator = () => {
         <h3 className="text-xl font-semibold mb-4">Generate Test Cases</h3>
         
         {/* Input type selector */}
-        <div className="flex mb-6 bg-gray-800 p-1 rounded-lg">
+        <div className="flex mb-6 bg-gray-800 p-1 rounded-lg overflow-hidden">
           <button
             type="button"
             className={`flex-1 py-2 px-3 rounded-md transition-colors ${
@@ -213,6 +222,17 @@ const TestCaseGenerator = () => {
           >
             Image Input
           </button>
+          <button
+            type="button"
+            className={`flex-1 py-2 px-3 rounded-md transition-colors ${
+              inputType === 'swagger' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}
+            onClick={() => handleInputTypeChange('swagger')}
+          >
+            Swagger API
+          </button>
         </div>
         
         <form onSubmit={onSubmit} className="flex flex-col">
@@ -231,7 +251,7 @@ const TestCaseGenerator = () => {
                 required={inputType === 'text'}
               ></textarea>
             </div>
-          ) : (
+          ) : inputType === 'image' ? (
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2">
                 Upload Screenshot:
@@ -287,6 +307,25 @@ const TestCaseGenerator = () => {
                   </div>
                 )}
               </div>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <label htmlFor="swaggerUrl" className="block text-sm font-medium mb-2">
+                Swagger/OpenAPI JSON URL:
+              </label>
+              <input
+                id="swaggerUrl"
+                name="swaggerUrl"
+                type="url"
+                value={swaggerUrl}
+                onChange={onChange}
+                placeholder="Enter the Swagger/OpenAPI JSON URL here..."
+                className="w-full bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required={inputType === 'swagger'}
+              />
+              <p className="mt-2 text-xs text-gray-400">
+                Example: https://petstore.swagger.io/v2/swagger.json
+              </p>
             </div>
           )}
 
