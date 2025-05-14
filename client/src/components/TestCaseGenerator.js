@@ -277,6 +277,16 @@ const TestCaseGenerator = () => {
                 className="w-full min-h-[200px] max-h-[40vh] bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 required={inputType === 'text'}
               ></textarea>
+              <button
+                type="button"
+                onClick={() => setFormData({
+                  ...formData,
+                  acceptanceCriteria: "As a user, I want to be able to reset my password so that I can regain access to my account if I forget my credentials."
+                })}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Fill with example
+              </button>
             </div>
           ) : inputType === 'image' ? (
             <div className="mb-6">
