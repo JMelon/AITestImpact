@@ -1059,6 +1059,8 @@ const TestCaseGenerator = () => {
                 </ReactMarkdown>
               </div>
             </div>
+          ) : loading ? (
+            null
           ) : (
             <div className="text-center py-8 text-gray-500">
               Generate test cases to see results here
