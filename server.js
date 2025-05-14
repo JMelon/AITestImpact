@@ -88,6 +88,44 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
   }
 });
 
+// API route for test automation code generation
+app.post('/api/generate-test-code', async (req, res) => {
+  try {
+    const { testCase, framework } = req.body;
+    
+    if (!testCase || !framework) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-2025-04-14',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert test automation engineer. Generate test automation code based on the provided test case and the selected automation framework. Use placeholder comments like "// insert_element_selector_here" or similar notation appropriate for the language whenever a selector for an element is needed. Include comments to explain the code structure and any setup requirements. Format the response as valid, runnable code with proper syntax highlighting. Include setup instructions if needed.'
+        },
+        {
+          role: 'user',
+          content: `Generate test automation code for the following test case using ${framework}: "${testCase}"`
+        }
+      ]
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return res.json(response.data);
+  } catch (error) {
+    console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
+    return res.status(500).json({ 
+      error: 'Error generating test automation code', 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
 // Helper function to determine unselected practices
 function getUnselectedPractices(selectedPractices) {
   const allPractices = [

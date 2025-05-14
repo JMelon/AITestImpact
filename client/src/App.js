@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import TestCaseGenerator from './components/TestCaseGenerator';
 import QualityAssessment from './components/QualityAssessment';
+import TestCodeGenerator from './components/TestCodeGenerator';
 import Navigation from './components/Navigation';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
       <main>
         {currentTool === 'testCaseGenerator' && <TestCaseGenerator />}
         {currentTool === 'qualityAssessment' && <QualityAssessment />}
+        {currentTool === 'testCodeGenerator' && <TestCodeGenerator />}
       </main>
       <footer className="text-center text-gray-400 mt-10 pt-6 border-t border-gray-800">
         <p>Created for NTD 2025 Tutorial</p>
