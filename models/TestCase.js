@@ -10,6 +10,27 @@ const TestCaseSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Add structured data fields
+  structuredData: {
+    format: String,
+    testId: String,
+    objective: String,
+    feature: String,
+    featureDescription: String,
+    scenarioType: String,
+    background: String,
+    preconditions: [String],
+    steps: [{
+      number: Number,
+      description: String,
+      expectedResult: String
+    }],
+    givenSteps: [String],
+    whenSteps: [String],
+    thenSteps: [String],
+    examples: String,
+    postconditions: [String]
+  },
   format: {
     type: String,
     enum: ['Procedural', 'Gherkin'],

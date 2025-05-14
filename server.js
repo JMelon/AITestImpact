@@ -196,16 +196,123 @@ Please generate at least 4-6 complete scenarios covering different aspects of th
       ];
     }
 
+    // Create a system prompt that asks for structured JSON response
+    const structuredTestCasePrompt = `You generate Test Cases based on ${acceptanceCriteria ? 'acceptance criteria' : imageData || imageDataArray ? 'UI screenshots' : swaggerUrl ? 'Swagger/OpenAPI documentation' : 'requirements'}. 
+    
+Instead of returning test cases as plain text, you MUST return a structured JSON object containing an array of test cases with the following schema:
+
+{
+  "testCases": [
+    // For Procedural Test Cases
+    {
+      "format": "Procedural",
+      "testId": "TC-XXX-001",
+      "title": "Test case title",
+      "objective": "What the test is verifying",
+      "preconditions": [
+        "Precondition 1",
+        "Precondition 2"
+      ],
+      "steps": [
+        {
+          "number": 1,
+          "description": "Step description",
+          "expectedResult": "Expected result for this step"
+        },
+        // More steps...
+      ],
+      "postconditions": [
+        "Postcondition 1",
+        "Postcondition 2"
+      ],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "${swaggerUrl ? 'API' : imageData ? 'UI' : 'Other'}",
+      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"]
+    },
+    // For Gherkin Test Cases
+    {
+      "format": "Gherkin",
+      "title": "Scenario title",
+      "feature": "Feature name",
+      "featureDescription": "Feature description",
+      "background": "Background steps (if any)",
+      "scenarioType": "Scenario or Scenario Outline",
+      "givenSteps": [
+        "Given step 1",
+        "And step 2"
+      ],
+      "whenSteps": [
+        "When step 1",
+        "And step 2"
+      ],
+      "thenSteps": [
+        "Then step 1",
+        "And step 2"
+      ],
+      "examples": "Examples table for scenario outlines",
+      "tags": ["@tag1", "@tag2"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "${swaggerUrl ? 'API' : imageData ? 'UI' : 'Other'}"
+    }
+  ],
+  "summary": {
+    "totalTestCases": 5,
+    "coverage": "Description of test coverage",
+    "recommendations": "Any recommendations for additional testing"
+  }
+}
+
+You MUST return ONLY the JSON object, with no additional text before or after. The JSON must be properly formatted and valid.`;
+
+    // Replace the original system prompt with our structured JSON prompt
+    if (messages.length > 0 && messages[0].role === 'system') {
+      messages[0].content += '\n\n' + structuredTestCasePrompt;
+    }
+
+    // Add a format instruction to the user message
+    if (messages.length > 1 && messages[1].role === 'user') {
+      messages[1].content += '\n\nPlease return the test cases in the structured JSON format as specified.';
+    }
+
+    console.log('Sending request to OpenAI API...');
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4.1-2025-04-14',
-      messages: messages
+      messages: messages,
+      response_format: { type: "json_object" }, // Request JSON format explicitly
+      temperature: 0.7,
+      max_tokens: 4000,
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 60000
     });
 
+    // Add detailed logging of the OpenAI response
+    console.log('OpenAI API Response Status:', response.status);
+    console.log('OpenAI Response Headers:', response.headers);
+    
+    if (response.data && response.data.choices && response.data.choices.length > 0) {
+      const content = response.data.choices[0].message.content;
+      console.log('Response Length:', content.length);
+      console.log('Response Preview:', content.substring(0, 500) + '...');
+      
+      try {
+        // Log if it's valid JSON
+        const parsed = JSON.parse(content);
+        console.log('Response is valid JSON with keys:', Object.keys(parsed));
+        if (parsed.testCases) {
+          console.log(`Contains ${parsed.testCases.length} test cases`);
+        }
+      } catch (e) {
+        console.log('Response is not valid JSON');
+      }
+    }
+
+    // Process and return the structured response
     return res.json(response.data);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
@@ -314,14 +421,29 @@ app.post('/api/refine-test-cases', async (req, res) => {
       }
     ];
 
+    // Add structured JSON requirement to the system message
+    if (messages.length > 0 && messages[0].role === 'system') {
+      messages[0].content += '\n\nYou MUST return your response as a structured JSON object with the same schema as the input test cases.';
+    }
+
+    // Add a format instruction to the user message
+    if (messages.length > 1 && messages[1].role === 'user') {
+      messages[1].content += '\n\nPlease return the refined test cases in structured JSON format.';
+    }
+
+    console.log('Sending request to OpenAI API for test case refinement...');
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4.1-2025-04-14',
-      messages: messages
+      messages: messages,
+      response_format: { type: "json_object" }, // Request JSON format explicitly
+      temperature: 0.7,
+      max_tokens: 4000,
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 60000
     });
 
     return res.json(response.data);

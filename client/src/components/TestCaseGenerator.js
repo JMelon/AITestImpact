@@ -3,6 +3,10 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// eslint-disable-next-line no-unused-vars
+import { parseTestCases } from '../utils/testCaseParser';
+// eslint-disable-next-line no-unused-vars
+import testCaseProcessor, { generateProceduralMarkdown, generateGherkinMarkdown, processStructuredTestCases } from '../utils/testCaseProcessor';
 
 // Custom renderer for code blocks in Markdown
 const CodeBlock = ({ node, inline, className, children, ...props }) => {
@@ -104,7 +108,6 @@ const TestCaseGenerator = () => {
   };
 
   const processImageFiles = (files) => {
-    // Filter for image files only
     const imageFiles = files.filter(file => file.type.match('image.*'));
     
     if (imageFiles.length === 0) {
@@ -112,7 +115,6 @@ const TestCaseGenerator = () => {
       return;
     }
 
-    // Check combined file size (max 16MB total)
     const totalSize = imageFiles.reduce((sum, file) => sum + file.size, 0);
     if (totalSize > 16 * 1024 * 1024) {
       setError('Total image size should be less than 16MB');
@@ -121,7 +123,6 @@ const TestCaseGenerator = () => {
 
     setImageFiles(prevFiles => [...prevFiles, ...imageFiles]);
     
-    // Process each file
     imageFiles.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -133,18 +134,14 @@ const TestCaseGenerator = () => {
     });
   };
 
-  // Function to compress image before sending - now with callback
   const compressImage = (dataUrl, quality = 0.7, callback) => {
     const img = new Image();
     img.onload = () => {
-      // Create canvas for resizing large images
       const canvas = document.createElement('canvas');
       
-      // Resize if image is very large
       let width = img.width;
       let height = img.height;
       
-      // Maximum dimensions (1600px for either dimension)
       const MAX_SIZE = 1600;
       if (width > MAX_SIZE || height > MAX_SIZE) {
         if (width > height) {
@@ -162,7 +159,6 @@ const TestCaseGenerator = () => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Get compressed data URL
       const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
       callback(compressedDataUrl);
     };
@@ -182,25 +178,6 @@ const TestCaseGenerator = () => {
     setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const clearImage = () => {
-    setImageFiles([]);
-    setImagePreviews([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const parseTestCases = (testCases, format) => {
-    // Example parsing logic, adjust as needed
-    return testCases.split('\n\n').map((tc, index) => ({
-      id: index + 1,
-      title: `Test Case ${index + 1}`,
-      content: tc,
-      tags: format === 'Gherkin' ? ['Gherkin'] : ['Procedural']
-    }));
-  };
-
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -208,11 +185,12 @@ const TestCaseGenerator = () => {
     setResult('');
     setCurrentRefinement(0);
     setOriginalResult('');
+    setParsedTestCases([]);
+    setSelectedTestCases({});
 
     try {
       let requestData = { ...formData };
 
-      // Setup request data based on input type
       if (inputType === 'image' && imagePreviews.length > 0) {
         requestData.imageDataArray = imagePreviews;
         requestData.acceptanceCriteria = ''; 
@@ -225,39 +203,77 @@ const TestCaseGenerator = () => {
         requestData.swaggerUrl = ''; 
       }
 
-      // Initial test case generation
-      let currentTestCases = '';
-      
-      // Initial API call to generate test cases
       const initialResponse = await axios.post('http://localhost:5000/api/generate-test-cases', requestData);
-      currentTestCases = initialResponse.data.choices[0].message.content;
-      setOriginalResult(currentTestCases);
-      setResult(currentTestCases);
+      
+      // Add logging for the API response
+      console.log('OpenAI API Response:', initialResponse.data);
+      
+      if (initialResponse.data.choices && initialResponse.data.choices[0]) {
+        console.log('Response content:', initialResponse.data.choices[0].message.content);
+        
+        try {
+          // Try to parse as JSON to examine structure
+          const jsonContent = JSON.parse(initialResponse.data.choices[0].message.content);
+          console.log('Parsed JSON structure:', jsonContent);
+          
+          if (jsonContent.testCases) {
+            console.log(`Found ${jsonContent.testCases.length} test cases in response`);
+            console.log('First test case sample:', jsonContent.testCases[0]);
+          }
+        } catch (parseError) {
+          console.log('Response is not in JSON format:', parseError);
+        }
+      }
+      
+      let responseContent;
+      
+      try {
+        if (initialResponse.data.choices && initialResponse.data.choices[0].message) {
+          const content = initialResponse.data.choices[0].message.content;
+          const jsonData = typeof content === 'string' ? JSON.parse(content) : content;
+          
+          if (jsonData.testCases) {
+            const formattedTestCases = jsonData.testCases.map(tc => {
+              return tc.format === 'Procedural' 
+                ? generateProceduralMarkdown(tc) 
+                : generateGherkinMarkdown(tc);
+            }).join('\n\n---\n\n');
+            
+            responseContent = formattedTestCases;
+            
+            const processed = processStructuredTestCases(jsonData);
+            setParsedTestCases(processed);
+            
+            const selected = {};
+            processed.forEach(tc => {
+              selected[tc.id] = true;
+            });
+            setSelectedTestCases(selected);
+          } else {
+            responseContent = JSON.stringify(jsonData, null, 2);
+          }
+        } else {
+          responseContent = JSON.stringify(initialResponse.data, null, 2);
+        }
+      } catch (parseError) {
+        console.error('Error parsing structured response:', parseError);
+        responseContent = initialResponse.data.choices[0].message.content;
+      }
+      
+      setOriginalResult(responseContent);
+      setResult(responseContent);
       setCurrentRefinement(1);
       
-      // Parse test cases for individual saving after getting result
-      const parsed = parseTestCases(currentTestCases, outputType);
-      setParsedTestCases(parsed);
-      
-      // Initialize all test cases as selected
-      const selected = {};
-      parsed.forEach(tc => {
-        selected[tc.id] = true;
-      });
-      setSelectedTestCases(selected);
-      
-      // Perform refinement iterations if refinementCount > 1
       for (let i = 1; i < parseInt(refinementCount); i++) {
-        if (currentTestCases) {
-          // Only continue if we have test cases to refine
+        if (responseContent) {
           const refinementResponse = await axios.post('http://localhost:5000/api/refine-test-cases', {
-            testCases: currentTestCases,
+            testCases: responseContent,
             outputType,
             language
           });
           
-          currentTestCases = refinementResponse.data.choices[0].message.content;
-          setResult(currentTestCases);
+          responseContent = refinementResponse.data.choices[0].message.content;
+          setResult(responseContent);
           setCurrentRefinement(i + 1);
         }
       }
@@ -308,18 +324,18 @@ const TestCaseGenerator = () => {
         return;
       }
       
-      // Save each selected test case
       const results = await Promise.all(selectedTests.map(async tc => {
         try {
           await axios.post('http://localhost:5000/api/test-cases', {
             title: tc.title,
             content: tc.content,
-            format: outputType,
-            priority: priority,
-            severity: severity,
-            category: inputType === 'swagger' ? 'API' : inputType === 'image' ? 'UI' : 'Other',
-            tags: outputType === 'Gherkin' ? tc.tags : [testType, extendedOptions],
-            state: 'Draft'
+            format: tc.format,
+            priority: tc.priority || priority,
+            severity: tc.severity || severity,
+            category: tc.category || (inputType === 'swagger' ? 'API' : inputType === 'image' ? 'UI' : 'Other'),
+            tags: tc.tags || [testType, extendedOptions],
+            state: 'Draft',
+            structuredData: tc.structuredData
           });
           return { id: tc.id, success: true };
         } catch (error) {
@@ -331,7 +347,6 @@ const TestCaseGenerator = () => {
       const successful = results.filter(r => r.success).length;
       setSaveMessage(`Successfully saved ${successful} of ${selectedTests.length} test cases`);
       
-      // Close modal after short delay if all successful
       if (successful === selectedTests.length) {
         setTimeout(() => {
           setShowSaveModal(false);
@@ -354,11 +369,9 @@ const TestCaseGenerator = () => {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Input Panel - Always on top */}
       <div className="bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-4">Generate Test Cases</h3>
         
-        {/* Input type selector */}
         <div className="flex mb-6 bg-gray-800 p-1 rounded-lg overflow-hidden">
           <button
             type="button"
@@ -533,7 +546,6 @@ const TestCaseGenerator = () => {
             </div>
           )}
 
-          {/* Advanced Test Configuration */}
           <div className="mb-6">
             <h4 className="text-md font-medium mb-3 pb-1 border-b border-gray-700">Advanced Test Configuration</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -682,7 +694,6 @@ const TestCaseGenerator = () => {
         </form>
       </div>
 
-      {/* Output Panel - Always below */}
       <div className="bg-gray-900 rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -713,11 +724,8 @@ const TestCaseGenerator = () => {
               <button
                 type="button"
                 onClick={() => {
-                  // Store the test cases in localStorage
                   localStorage.setItem('testCasesForAutomation', result);
-                  // Switch to the TestCodeGenerator tool
                   if (typeof window !== 'undefined') {
-                    // Find the button for Test Code Generator and click it
                     const buttons = document.querySelectorAll('button');
                     const testCodeButton = Array.from(buttons).find(
                       (button) => button.textContent.includes('Test Code Generator')
@@ -789,7 +797,6 @@ const TestCaseGenerator = () => {
         </div>
       </div>
 
-      {/* Save Test Cases Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] flex flex-col">
