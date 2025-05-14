@@ -305,6 +305,61 @@ app.post('/api/refine-test-cases', async (req, res) => {
   }
 });
 
+// API route for reviewing requirements
+app.post('/api/review-requirements', async (req, res) => {
+  try {
+    const { requirements } = req.body;
+    
+    if (!requirements) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Always use comprehensive analysis with all focus areas
+    const systemPrompt = `You are an expert requirements analyst. Review the provided requirements for:
+
+- Contradictions and inconsistencies
+- Security vulnerabilities and concerns 
+- Performance implications and bottlenecks
+- Ambiguities and unclear specifications
+- Missing requirements and edge cases
+- Testability issues
+- Implementation challenges
+- Contextual misalignments with industry standards
+- Compliance considerations
+
+Provide a structured analysis with clear categories of findings, specific references to the requirements, and recommendations for improvement. Format your response in Markdown with sections and bullet points for clarity.`;
+
+    const messages = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: `Please review these requirements and provide analysis:\n\n${requirements}`
+      }
+    ];
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-2025-04-14',
+      messages: messages
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return res.json(response.data);
+  } catch (error) {
+    console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
+    return res.status(500).json({ 
+      error: 'Error analyzing requirements', 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
 // Helper function to determine unselected practices
 function getUnselectedPractices(selectedPractices) {
   const allPractices = [
