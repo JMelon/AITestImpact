@@ -42,9 +42,7 @@ Objective: MVP of AI powered testing tools platform.
 - Jira integration to be able to link test cases and results to jira tickets
 
 
-Goal of the platform
-- Build an practical, sharable solution that integrates AI tools to support the entire testing workflow
-- Reduce time and effort in QA
+Live Deployment: https://v0-test-case-generator-code-bsi2qg7nd-jmelons-projects.vercel.app/
 
 #### Questions?
 How to address the issue with trust - AI is not always doing what we need to and not always do good enough work. This would result in trust issues and then reviewing everything that AI is doing which can neglect the benefit of using it.
