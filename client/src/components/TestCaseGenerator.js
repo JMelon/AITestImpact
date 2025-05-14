@@ -549,23 +549,55 @@ const TestCaseGenerator = () => {
         return;
       }
       
+      // Define valid categories according to the backend validation
+      const validCategories = ['API', 'UI', 'Functional', 'Performance', 'Security', 'Other'];
+      
+      console.log('Saving test cases:', selectedTests);
+      
       const results = await Promise.all(selectedTests.map(async tc => {
         try {
-          await axios.post('http://localhost:5000/api/test-cases', {
+          // Make sure we use a valid category or move the original category to tags
+          let category = 'Other';
+          let tags = Array.isArray(tc.tags) ? [...tc.tags] : [testType, extendedOptions];
+          
+          // If it's a valid category, use it
+          if (tc.category && validCategories.includes(tc.category)) {
+            category = tc.category;
+          } else if (tc.category) {
+            // If it's an invalid category, add it as a tag instead
+            tags.push(tc.category);
+          } else if (inputType === 'swagger') {
+            category = 'API';
+          } else if (inputType === 'image') {
+            category = 'UI';
+          } else {
+            category = 'Functional';
+          }
+          
+          // Remove duplicates from tags
+          tags = [...new Set(tags)];
+          
+          const response = await axios.post('http://localhost:5000/api/test-cases', {
             title: tc.title,
             content: tc.content,
-            format: tc.format,
+            format: tc.format || outputType,
             priority: tc.priority || priority,
             severity: tc.severity || severity,
-            category: tc.category || (inputType === 'swagger' ? 'API' : inputType === 'image' ? 'UI' : 'Other'),
-            tags: tc.tags || [testType, extendedOptions],
+            category: category,
+            tags: tags,
             state: 'Draft',
             structuredData: tc.structuredData
           });
+          
+          console.log(`Successfully saved test case ${tc.id}:`, response.data);
           return { id: tc.id, success: true };
         } catch (error) {
-          console.error(`Error saving test case ${tc.id}:`, error);
-          return { id: tc.id, success: false, error: error.message };
+          console.error(`Error saving test case ${tc.id}:`, error.response?.data || error);
+          return { 
+            id: tc.id, 
+            success: false, 
+            error: error.response?.data?.error || error.message 
+          };
         }
       }));
       
