@@ -3,6 +3,8 @@ const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
 const path = require('path');
+const mongoose = require('mongoose');
+const testCasesRoutes = require('./routes/testCases');
 
 const app = express();
 
@@ -12,6 +14,33 @@ app.use(cors());
 // Increase the payload size limit for JSON requests (50MB)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// MongoDB Connection - only if enabled in environment
+const enableMongoDB = process.env.ENABLE_MONGODB === 'true';
+
+if (enableMongoDB) {
+  console.log('MongoDB integration enabled, attempting to connect...');
+  mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => {
+      console.error('MongoDB connection error:', err.message);
+      console.log('Continuing without MongoDB functionality');
+      console.log('To disable MongoDB connection attempts, set ENABLE_MONGODB=false in your .env file');
+    });
+} else {
+  console.log('MongoDB integration disabled by configuration');
+}
+
+// Use test case routes if MongoDB is enabled
+if (enableMongoDB) {
+  app.use('/api/test-cases', testCasesRoutes);
+}
+
+// API routes for test cases
+app.use('/api/test-cases', require('./routes/testCases'));
 
 // API route for generating test cases
 app.post('/api/generate-test-cases', async (req, res) => {

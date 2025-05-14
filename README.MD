@@ -17,6 +17,7 @@ Date: 14th May
 15:15 - 17:00 Tutorial
 
 Bonus: LLM testing (How to trick an AI (and why you should try it))
+https://gandalf.lakera.ai
 
 ### Tutorial
 Objective: MVP of AI powered testing tools platform.

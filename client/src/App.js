@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import TestCaseGenerator from './components/TestCaseGenerator';
 import QualityAssessment from './components/QualityAssessment';
 import TestCodeGenerator from './components/TestCodeGenerator';
+// eslint-disable-next-line no-unused-vars
 import Navigation from './components/Navigation';
 import RequirementReview from './components/RequirementReview';
+import TestCaseManager from './components/TestCaseManager';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('testCaseGenerator');
@@ -55,6 +57,16 @@ function App() {
             >
               Requirement Review
             </button>
+            <button
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                activeComponent === 'testCaseManager'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+              onClick={() => setActiveComponent('testCaseManager')}
+            >
+              Test Case Manager
+            </button>
           </div>
         </nav>
       </header>
@@ -64,6 +76,7 @@ function App() {
         {activeComponent === 'qualityAssessment' && <QualityAssessment />}
         {activeComponent === 'testCodeGenerator' && <TestCodeGenerator />}
         {activeComponent === 'requirementReview' && <RequirementReview />}
+        {activeComponent === 'testCaseManager' && <TestCaseManager />}
       </main>
 
       <footer className="text-center text-gray-400 mt-10 pt-6 border-t border-gray-800">

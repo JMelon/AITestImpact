@@ -50,6 +50,11 @@ const TestCaseGenerator = () => {
   const [error, setError] = useState('');
   const [currentRefinement, setCurrentRefinement] = useState(0);
   const [originalResult, setOriginalResult] = useState('');
+  const [parsedTestCases, setParsedTestCases] = useState([]);
+  const [selectedTestCases, setSelectedTestCases] = useState({});
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveInProgress, setSaveInProgress] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const fileInputRef = useRef(null);
 
   const { 
@@ -179,12 +184,21 @@ const TestCaseGenerator = () => {
 
   // eslint-disable-next-line no-unused-vars
   const clearImage = () => {
-    // Update to use the new state setters for the multi-image implementation
     setImageFiles([]);
     setImagePreviews([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const parseTestCases = (testCases, format) => {
+    // Example parsing logic, adjust as needed
+    return testCases.split('\n\n').map((tc, index) => ({
+      id: index + 1,
+      title: `Test Case ${index + 1}`,
+      content: tc,
+      tags: format === 'Gherkin' ? ['Gherkin'] : ['Procedural']
+    }));
   };
 
   const onSubmit = async (e) => {
@@ -221,6 +235,17 @@ const TestCaseGenerator = () => {
       setResult(currentTestCases);
       setCurrentRefinement(1);
       
+      // Parse test cases for individual saving after getting result
+      const parsed = parseTestCases(currentTestCases, outputType);
+      setParsedTestCases(parsed);
+      
+      // Initialize all test cases as selected
+      const selected = {};
+      parsed.forEach(tc => {
+        selected[tc.id] = true;
+      });
+      setSelectedTestCases(selected);
+      
       // Perform refinement iterations if refinementCount > 1
       for (let i = 1; i < parseInt(refinementCount); i++) {
         if (currentTestCases) {
@@ -245,6 +270,77 @@ const TestCaseGenerator = () => {
       console.error('Error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleTestCase = (id) => {
+    setSelectedTestCases(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const selectAllTestCases = () => {
+    const selected = {};
+    parsedTestCases.forEach(tc => {
+      selected[tc.id] = true;
+    });
+    setSelectedTestCases(selected);
+  };
+
+  const deselectAllTestCases = () => {
+    const selected = {};
+    parsedTestCases.forEach(tc => {
+      selected[tc.id] = false;
+    });
+    setSelectedTestCases(selected);
+  };
+
+  const saveSelectedTestCases = async () => {
+    setSaveInProgress(true);
+    setSaveMessage('');
+    
+    try {
+      const selectedTests = parsedTestCases.filter(tc => selectedTestCases[tc.id]);
+      
+      if (selectedTests.length === 0) {
+        setSaveMessage('Please select at least one test case to save');
+        return;
+      }
+      
+      // Save each selected test case
+      const results = await Promise.all(selectedTests.map(async tc => {
+        try {
+          await axios.post('http://localhost:5000/api/test-cases', {
+            title: tc.title,
+            content: tc.content,
+            format: outputType,
+            priority: priority,
+            severity: severity,
+            category: inputType === 'swagger' ? 'API' : inputType === 'image' ? 'UI' : 'Other',
+            tags: outputType === 'Gherkin' ? tc.tags : [testType, extendedOptions],
+            state: 'Draft'
+          });
+          return { id: tc.id, success: true };
+        } catch (error) {
+          console.error(`Error saving test case ${tc.id}:`, error);
+          return { id: tc.id, success: false, error: error.message };
+        }
+      }));
+      
+      const successful = results.filter(r => r.success).length;
+      setSaveMessage(`Successfully saved ${successful} of ${selectedTests.length} test cases`);
+      
+      // Close modal after short delay if all successful
+      if (successful === selectedTests.length) {
+        setTimeout(() => {
+          setShowSaveModal(false);
+        }, 2000);
+      }
+    } catch (error) {
+      setSaveMessage(`Error: ${error.message}`);
+    } finally {
+      setSaveInProgress(false);
     }
   };
 
@@ -606,27 +702,36 @@ const TestCaseGenerator = () => {
             )}
           </div>
           {result && (
-            <button
-              type="button"
-              onClick={() => {
-                // Store the test cases in localStorage
-                localStorage.setItem('testCasesForAutomation', result);
-                // Switch to the TestCodeGenerator tool
-                if (typeof window !== 'undefined') {
-                  // Find the button for Test Code Generator and click it
-                  const buttons = document.querySelectorAll('button');
-                  const testCodeButton = Array.from(buttons).find(
-                    (button) => button.textContent.includes('Test Code Generator')
-                  );
-                  if (testCodeButton) {
-                    testCodeButton.click();
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(true)}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm flex items-center gap-1 transition-colors"
+              >
+                Save to Library
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Store the test cases in localStorage
+                  localStorage.setItem('testCasesForAutomation', result);
+                  // Switch to the TestCodeGenerator tool
+                  if (typeof window !== 'undefined') {
+                    // Find the button for Test Code Generator and click it
+                    const buttons = document.querySelectorAll('button');
+                    const testCodeButton = Array.from(buttons).find(
+                      (button) => button.textContent.includes('Test Code Generator')
+                    );
+                    if (testCodeButton) {
+                      testCodeButton.click();
+                    }
                   }
-                }
-              }}
-              className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1 transition-colors"
-            >
-              Use in Code Generator
-            </button>
+                }}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1 transition-colors"
+              >
+                Use in Code Generator
+              </button>
+            </div>
           )}
         </div>
         {loading && (
@@ -683,6 +788,117 @@ const TestCaseGenerator = () => {
           )}
         </div>
       </div>
+
+      {/* Save Test Cases Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Save Test Cases</h3>
+              <button
+                className="text-gray-400 hover:text-white"
+                onClick={() => setShowSaveModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm text-gray-400">Select the test cases you want to save:</p>
+                <div className="flex gap-2">
+                  <button
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                    onClick={selectAllTestCases}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                    onClick={deselectAllTestCases}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto mb-4">
+              {parsedTestCases.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No test cases found to save</p>
+              ) : (
+                <div className="space-y-3">
+                  {parsedTestCases.map((testCase) => (
+                    <div 
+                      key={testCase.id} 
+                      className="border border-gray-700 rounded-lg p-3 flex items-start gap-3"
+                    >
+                      <input
+                        type="checkbox"
+                        id={`tc-${testCase.id}`}
+                        checked={!!selectedTestCases[testCase.id]}
+                        onChange={() => toggleTestCase(testCase.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <label 
+                          htmlFor={`tc-${testCase.id}`} 
+                          className="font-medium cursor-pointer hover:text-blue-300"
+                        >
+                          {testCase.title}
+                        </label>
+                        <div className="mt-1 text-sm text-gray-400 line-clamp-2">
+                          {testCase.content.substring(0, 200)}...
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {saveMessage && (
+              <div className={`p-3 rounded-lg mb-4 ${
+                saveMessage.includes('Error') 
+                  ? 'bg-red-900/30 border border-red-800 text-red-200' 
+                  : 'bg-green-900/30 border border-green-800 text-green-200'
+              }`}>
+                {saveMessage}
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                onClick={() => setShowSaveModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded flex items-center gap-2 ${
+                  saveInProgress ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                onClick={saveSelectedTestCases}
+                disabled={saveInProgress}
+              >
+                {saveInProgress ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Selected Test Cases'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
