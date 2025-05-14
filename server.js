@@ -20,7 +20,8 @@ app.post('/api/generate-test-cases', async (req, res) => {
       acceptanceCriteria, 
       outputType, 
       language, 
-      imageData, 
+      imageData,
+      imageDataArray, 
       swaggerUrl,
       priority,
       severity,
@@ -28,7 +29,7 @@ app.post('/api/generate-test-cases', async (req, res) => {
       extendedOptions
     } = req.body;
     
-    if ((!acceptanceCriteria && !imageData && !swaggerUrl) || !outputType || !language) {
+    if ((!acceptanceCriteria && !imageData && !imageDataArray && !swaggerUrl) || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -104,8 +105,33 @@ Please generate at least 4-6 complete scenarios covering different aspects of th
       } catch (error) {
         return res.status(400).json({ error: 'Failed to fetch Swagger JSON from provided URL' });
       }
+    } else if (imageDataArray && imageDataArray.length > 0) {
+      // For multiple images test case generation
+      const imageContentItems = imageDataArray.map((img, index) => ({
+        type: 'image_url',
+        image_url: {
+          url: img,
+        }
+      }));
+      
+      messages = [
+        {
+          role: 'system',
+          content: 'You generate Test Cases based on UI screenshots. Analyze the multiple images to identify UI elements, features, and user workflow across different screens. Then generate comprehensive test cases that cover the entire user journey shown across these screens. It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-UI-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Generate test cases in ${outputType} format for the UI shown in the ${imageDataArray.length} attached images. These images represent different screens or states of the application. Create tests that cover the workflow across these screens. Use language: ${language}. ${testConfigInfo}`
+            },
+            ...imageContentItems
+          ]
+        }
+      ];
     } else if (imageData) {
-      // For image-based test case generation
+      // For single image test case generation (keeping for backward compatibility)
       messages = [
         {
           role: 'system',

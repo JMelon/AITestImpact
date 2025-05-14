@@ -42,8 +42,8 @@ const TestCaseGenerator = () => {
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
   // eslint-disable-next-line no-unused-vars
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,9 +74,9 @@ const TestCaseGenerator = () => {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      processImageFile(file);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      processImageFiles(files);
     }
   };
 
@@ -93,36 +93,43 @@ const TestCaseGenerator = () => {
     e.preventDefault();
     setIsDragging(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processImageFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processImageFiles(Array.from(e.dataTransfer.files));
     }
   };
 
-  const processImageFile = (file) => {
-    // Check if file is an image
-    if (!file.type.match('image.*')) {
-      setError('Please select an image file (PNG, JPG, JPEG, etc.)');
-      return;
-    }
-
-    // Check file size (max 8MB)
-    if (file.size > 8 * 1024 * 1024) {
-      setError('Image size should be less than 8MB');
-      return;
-    }
-
-    setImageFile(file);
+  const processImageFiles = (files) => {
+    // Filter for image files only
+    const imageFiles = files.filter(file => file.type.match('image.*'));
     
-    // Create image preview with compression
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      compressImage(reader.result, 0.7); // Compress image to 70% quality
-    };
-    reader.readAsDataURL(file);
+    if (imageFiles.length === 0) {
+      setError('Please select image files (PNG, JPG, JPEG, etc.)');
+      return;
+    }
+
+    // Check combined file size (max 16MB total)
+    const totalSize = imageFiles.reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > 16 * 1024 * 1024) {
+      setError('Total image size should be less than 16MB');
+      return;
+    }
+
+    setImageFiles(prevFiles => [...prevFiles, ...imageFiles]);
+    
+    // Process each file
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        compressImage(reader.result, 0.7, (compressedDataUrl) => {
+          setImagePreviews(prev => [...prev, compressedDataUrl]);
+        });
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  // Function to compress image before sending
-  const compressImage = (dataUrl, quality = 0.7) => {
+  // Function to compress image before sending - now with callback
+  const compressImage = (dataUrl, quality = 0.7, callback) => {
     const img = new Image();
     img.onload = () => {
       // Create canvas for resizing large images
@@ -152,14 +159,29 @@ const TestCaseGenerator = () => {
       
       // Get compressed data URL
       const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-      setImagePreview(compressedDataUrl);
+      callback(compressedDataUrl);
     };
     img.src = dataUrl;
   };
 
+  const clearAllImages = () => {
+    setImageFiles([]);
+    setImagePreviews([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index) => {
+    setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
+  };
+
+  // eslint-disable-next-line no-unused-vars
   const clearImage = () => {
-    setImageFile(null);
-    setImagePreview('');
+    // Update to use the new state setters for the multi-image implementation
+    setImageFiles([]);
+    setImagePreviews([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -176,16 +198,16 @@ const TestCaseGenerator = () => {
     try {
       let requestData = { ...formData };
 
-      // Setup request data as before
-      if (inputType === 'image' && imagePreview) {
-        requestData.imageData = imagePreview;
+      // Setup request data based on input type
+      if (inputType === 'image' && imagePreviews.length > 0) {
+        requestData.imageDataArray = imagePreviews;
         requestData.acceptanceCriteria = ''; 
         requestData.swaggerUrl = ''; 
       } else if (inputType === 'swagger') {
-        requestData.imageData = ''; 
+        requestData.imageDataArray = []; 
         requestData.acceptanceCriteria = ''; 
       } else {
-        requestData.imageData = ''; 
+        requestData.imageDataArray = []; 
         requestData.swaggerUrl = ''; 
       }
 
@@ -229,7 +251,7 @@ const TestCaseGenerator = () => {
   const isSubmitDisabled = () => {
     if (loading) return true;
     if (inputType === 'text') return !acceptanceCriteria;
-    if (inputType === 'image') return !imagePreview;
+    if (inputType === 'image') return imagePreviews.length === 0;
     if (inputType === 'swagger') return !swaggerUrl;
     return true;
   };
@@ -305,14 +327,25 @@ const TestCaseGenerator = () => {
             </div>
           ) : inputType === 'image' ? (
             <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
-                Upload Screenshot:
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium">
+                  Upload Screenshots:
+                </label>
+                {imagePreviews.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllImages}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
               <div
                 className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
                   isDragging 
                     ? 'border-blue-500 bg-blue-500/10' 
-                    : imagePreview 
+                    : imagePreviews.length > 0
                       ? 'border-green-500 bg-green-500/10' 
                       : 'border-gray-600 hover:border-gray-500'
                 }`}
@@ -327,38 +360,61 @@ const TestCaseGenerator = () => {
                   className="hidden"
                   onChange={handleImageChange}
                   ref={fileInputRef}
+                  multiple
                 />
                 
-                {imagePreview ? (
-                  <div className="relative">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="max-h-[300px] mx-auto rounded-lg" 
-                    />
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full"
+                {imagePreviews.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-2">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative" onClick={e => e.stopPropagation()}>
+                        <img 
+                          src={preview} 
+                          alt={`Preview ${index + 1}`} 
+                          className="max-h-[160px] mx-auto rounded-lg border border-gray-700"
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(index);
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <div className="text-xs text-gray-400 mt-1 text-center">Image {index + 1}</div>
+                      </div>
+                    ))}
+                    <div 
+                      className="flex items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-4 h-[160px]"
                       onClick={(e) => {
                         e.stopPropagation();
-                        clearImage();
+                        fileInputRef.current?.click();
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </button>
+                      <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <p className="mt-1 text-sm text-gray-400">Add more</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="py-8">
                     <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p className="mt-2 text-sm text-gray-400">Drag and drop an image here, or click to select</p>
-                    <p className="mt-1 text-xs text-gray-500">(Max file size: 4MB)</p>
+                    <p className="mt-2 text-sm text-gray-400">Drag and drop images here, or click to select multiple</p>
+                    <p className="mt-1 text-xs text-gray-500">(Max total size: 16MB)</p>
                   </div>
                 )}
               </div>
+              <p className="mt-2 text-xs text-gray-400">
+                {imagePreviews.length > 0 ? `${imagePreviews.length} image(s) selected` : ''}
+              </p>
             </div>
           ) : (
             <div className="mb-6">
