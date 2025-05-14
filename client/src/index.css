@@ -12,3 +12,108 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Add markdown table styling */
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #4a5568;
+  padding: 0.5rem;
+}
+
+.markdown-content th {
+  background-color: #2d3748;
+  text-align: center;
+  font-weight: 600;
+}
+
+.markdown-content tr:nth-child(even) {
+  background-color: rgba(74, 85, 104, 0.2);
+}
+
+.markdown-content tr:hover {
+  background-color: rgba(74, 85, 104, 0.3);
+}
+
+/* Style for Test Case headers and content */
+.markdown-content strong {
+  font-weight: 600;
+  color: #a0aec0;
+}
+
+.markdown-content ul {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content hr {
+  border: 0;
+  height: 1px;
+  background: #4a5568;
+  margin: 1.5rem 0;
+}
+
+/* Table styling for Markdown */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.prose thead {
+  background-color: #374151;
+  font-weight: 600;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid #4B5563;
+  padding: 0.5rem 1rem;
+  text-align: left;
+}
+
+.prose th {
+  font-weight: 600;
+}
+
+.prose tr:nth-child(even) {
+  background-color: #1F2937;
+}
+
+.prose tr:hover {
+  background-color: #374151;
+}
+
+/* Make sure strong text stands out */
+.prose strong {
+  color: #D1D5DB;
+  font-weight: 600;
+}
+
+/* Style for horizontal rules */
+.prose hr {
+  margin: 1.5rem 0;
+  border: 0;
+  border-top: 1px solid #4B5563;
+}
+
+/* Better list styling */
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.prose li {
+  margin-bottom: 0.25rem;
+}
