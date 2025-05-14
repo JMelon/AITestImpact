@@ -28,32 +28,6 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
   );
 };
 
-// Custom renderers for tables in Markdown
-const TableRenderer = ({ children }) => (
-  <div className="overflow-x-auto my-4">
-    <table className="w-full border-collapse border border-gray-700">
-      {children}
-    </table>
-  </div>
-);
-
-const TableHeadRenderer = ({ children }) => (
-  <thead className="bg-gray-800">
-    {children}
-  </thead>
-);
-
-const TableCellRenderer = ({ isHeader, children }) => {
-  const className = isHeader 
-    ? "py-2 px-4 border border-gray-700 font-semibold text-center"
-    : "py-2 px-4 border border-gray-700";
-  return isHeader ? <th className={className}>{children}</th> : <td className={className}>{children}</td>;
-};
-
-const TableRowRenderer = ({ children }) => (
-  <tr className="hover:bg-gray-700/50">{children}</tr>
-);
-
 const TestCaseGenerator = () => {
   const [formData, setFormData] = useState({
     acceptanceCriteria: '',
