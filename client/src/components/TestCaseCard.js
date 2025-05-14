@@ -1,10 +1,31 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import CodeBlock from './CodeBlock';
-import { getPriorityColor, getSeverityColor, formatGherkinContent } from '../utils/formatters';
 
 const TestCaseCard = ({ testCase }) => {
   const [expanded, setExpanded] = useState(false);
+  
+  // Helper function to get color class based on priority
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'P0-Critical': return 'bg-red-600';
+      case 'P1-High': return 'bg-orange-600';
+      case 'P2-Medium': return 'bg-yellow-600';
+      case 'P3-Low': return 'bg-blue-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  // Helper function to get color class based on severity
+  const getSeverityColor = (severity) => {
+    switch (severity) {
+      case 'Blocker': return 'bg-red-700';
+      case 'Critical': return 'bg-red-600';
+      case 'Major': return 'bg-orange-600';
+      case 'Minor': return 'bg-yellow-600';
+      default: return 'bg-gray-600';
+    }
+  };
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg mb-4 overflow-hidden">
@@ -62,10 +83,7 @@ const TestCaseCard = ({ testCase }) => {
       
       {expanded && (
         <div className="border-t border-gray-700 p-4">
-          {testCase.format === 'Gherkin' ? (
-            // Use our specialized Gherkin formatter
-            formatGherkinContent(testCase)
-          ) : testCase.format === 'Procedural' && testCase.structuredData && testCase.structuredData.procedural ? (
+          {testCase.format === 'Procedural' && testCase.structuredData && testCase.structuredData.procedural ? (
             // Procedural test case details
             <div className="space-y-4">
               {testCase.structuredData.preconditions && testCase.structuredData.preconditions.length > 0 && (
@@ -116,8 +134,68 @@ const TestCaseCard = ({ testCase }) => {
                 </div>
               )}
             </div>
+          ) : testCase.format === 'Gherkin' && testCase.structuredData && testCase.structuredData.gherkin ? (
+            // Gherkin test case details
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-sm text-gray-300 mb-1">Feature:</h4>
+                <p className="text-sm bg-gray-900 p-2 rounded">{testCase.structuredData.feature}</p>
+              </div>
+              
+              {testCase.structuredData.background && (
+                <div>
+                  <h4 className="font-medium text-sm text-gray-300 mb-1">Background:</h4>
+                  <pre className="text-sm bg-gray-900 p-2 rounded overflow-x-auto">{testCase.structuredData.background}</pre>
+                </div>
+              )}
+              
+              <div>
+                <h4 className="font-medium text-sm text-gray-300 mb-1">{testCase.structuredData.scenarioType || 'Scenario'}:</h4>
+                <p className="text-sm">{testCase.title}</p>
+              </div>
+              
+              {testCase.structuredData.givenSteps && testCase.structuredData.givenSteps.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm text-green-500 mb-1">Given:</h4>
+                  <ul className="space-y-1 text-sm">
+                    {testCase.structuredData.givenSteps.map((step, idx) => (
+                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {testCase.structuredData.whenSteps && testCase.structuredData.whenSteps.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm text-blue-500 mb-1">When:</h4>
+                  <ul className="space-y-1 text-sm">
+                    {testCase.structuredData.whenSteps.map((step, idx) => (
+                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {testCase.structuredData.thenSteps && testCase.structuredData.thenSteps.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-sm text-purple-500 mb-1">Then:</h4>
+                  <ul className="space-y-1 text-sm">
+                    {testCase.structuredData.thenSteps.map((step, idx) => (
+                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {testCase.structuredData.examples && (
+                <div>
+                  <h4 className="font-medium text-sm text-gray-300 mb-1">Examples:</h4>
+                  <pre className="text-sm bg-gray-900 p-2 rounded overflow-x-auto">{testCase.structuredData.examples}</pre>
+                </div>
+              )}
+            </div>
           ) : (
-            // Fallback to raw content with markdown
+            // Fallback to raw content if structured data is not available
             <div className="prose prose-invert prose-sm max-w-none">
               <ReactMarkdown components={{ code: CodeBlock }}>
                 {testCase.content}

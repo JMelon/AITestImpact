@@ -1,261 +1,20 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-// eslint-disable-next-line no-unused-vars
 import { parseTestCases } from '../utils/testCaseParser';
-// eslint-disable-next-line no-unused-vars
-import testCaseProcessor, { generateProceduralMarkdown, generateGherkinMarkdown, processStructuredTestCases } from '../utils/testCaseProcessor';
-
-// Custom renderer for code blocks in Markdown
-const CodeBlock = ({ node, inline, className, children, ...props }) => {
-  const match = /language-(\w+)/.exec(className || '');
-  return !inline && match ? (
-    <SyntaxHighlighter
-      style={vscDarkPlus}
-      language={match[1]}
-      PreTag="div"
-      customStyle={{ 
-        margin: '1rem 0', 
-        borderRadius: '0.375rem' 
-      }}
-      showLineNumbers={true}
-      {...props}
-    >
-      {String(children).replace(/\n$/, '')}
-    </SyntaxHighlighter>
-  ) : (
-    <code className={className ? `${className} bg-gray-800 px-1 rounded` : 'bg-gray-800 px-1 rounded'} {...props}>
-      {children}
-    </code>
-  );
-};
-
-const TestCaseCard = ({ testCase }) => {
-  const [expanded, setExpanded] = useState(false);
-  
-  // Helper function to get color class based on priority
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'P0-Critical': return 'bg-red-600';
-      case 'P1-High': return 'bg-orange-600';
-      case 'P2-Medium': return 'bg-yellow-600';
-      case 'P3-Low': return 'bg-blue-600';
-      default: return 'bg-gray-600';
-    }
-  };
-
-  // Helper function to get color class based on severity
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'Blocker': return 'bg-red-700';
-      case 'Critical': return 'bg-red-600';
-      case 'Major': return 'bg-orange-600';
-      case 'Minor': return 'bg-yellow-600';
-      default: return 'bg-gray-600';
-    }
-  };
-
-  return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg mb-4 overflow-hidden">
-      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex justify-between items-start">
-          <h3 className="font-medium text-lg mb-2">{testCase.title}</h3>
-          <div className="flex space-x-2">
-            {testCase.priority && (
-              <span className={`px-2 py-1 text-xs rounded ${getPriorityColor(testCase.priority)}`}>
-                {testCase.priority}
-              </span>
-            )}
-            {testCase.severity && (
-              <span className={`px-2 py-1 text-xs rounded ${getSeverityColor(testCase.severity)}`}>
-                {testCase.severity}
-              </span>
-            )}
-            {testCase.format && (
-              <span className="bg-gray-700 px-2 py-1 text-xs rounded">
-                {testCase.format}
-              </span>
-            )}
-          </div>
-        </div>
-        
-        {testCase.structuredData && testCase.format === 'Procedural' && (
-          <div className="mt-2 text-sm text-gray-300">
-            <p>{testCase.structuredData.objective}</p>
-          </div>
-        )}
-        
-        {testCase.tags && testCase.tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {testCase.tags.map((tag, idx) => (
-              <span key={idx} className="bg-gray-700 text-xs px-2 py-0.5 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-        
-        <div className="mt-3 flex items-center text-gray-400 text-sm">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="ml-1">{expanded ? 'Hide details' : 'Show details'}</span>
-        </div>
-      </div>
-      
-      {expanded && (
-        <div className="border-t border-gray-700 p-4">
-          {testCase.format === 'Procedural' && testCase.structuredData && testCase.structuredData.procedural ? (
-            // Procedural test case details
-            <div className="space-y-4">
-              {testCase.structuredData.preconditions && testCase.structuredData.preconditions.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-300 mb-1">Preconditions:</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-1">
-                    {testCase.structuredData.preconditions.map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {testCase.structuredData.steps && testCase.structuredData.steps.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-300 mb-1">Steps:</h4>
-                  <div className="bg-gray-900 rounded overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-800">
-                        <tr>
-                          <th className="py-2 px-3 text-left w-12">#</th>
-                          <th className="py-2 px-3 text-left">Step</th>
-                          <th className="py-2 px-3 text-left">Expected Result</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {testCase.structuredData.steps.map((step, idx) => (
-                          <tr key={idx} className="border-t border-gray-800 hover:bg-gray-800/50">
-                            <td className="py-2 px-3">{step.number || idx + 1}</td>
-                            <td className="py-2 px-3">{step.description}</td>
-                            <td className="py-2 px-3 text-green-400">{step.expectedResult}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              
-              {testCase.structuredData.postconditions && testCase.structuredData.postconditions.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-300 mb-1">Postconditions:</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-1">
-                    {testCase.structuredData.postconditions.map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : testCase.format === 'Gherkin' && testCase.structuredData && testCase.structuredData.gherkin ? (
-            // Gherkin test case details
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-sm text-gray-300 mb-1">Feature:</h4>
-                <p className="text-sm bg-gray-900 p-2 rounded">{testCase.structuredData.feature}</p>
-              </div>
-              
-              {testCase.structuredData.background && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-300 mb-1">Background:</h4>
-                  <pre className="text-sm bg-gray-900 p-2 rounded overflow-x-auto">{testCase.structuredData.background}</pre>
-                </div>
-              )}
-              
-              <div>
-                <h4 className="font-medium text-sm text-gray-300 mb-1">{testCase.structuredData.scenarioType || 'Scenario'}:</h4>
-                <p className="text-sm">{testCase.title}</p>
-              </div>
-              
-              {testCase.structuredData.givenSteps && testCase.structuredData.givenSteps.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-green-500 mb-1">Given:</h4>
-                  <ul className="space-y-1 text-sm">
-                    {testCase.structuredData.givenSteps.map((step, idx) => (
-                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {testCase.structuredData.whenSteps && testCase.structuredData.whenSteps.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-blue-500 mb-1">When:</h4>
-                  <ul className="space-y-1 text-sm">
-                    {testCase.structuredData.whenSteps.map((step, idx) => (
-                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {testCase.structuredData.thenSteps && testCase.structuredData.thenSteps.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-purple-500 mb-1">Then:</h4>
-                  <ul className="space-y-1 text-sm">
-                    {testCase.structuredData.thenSteps.map((step, idx) => (
-                      <li key={idx} className="bg-gray-900 p-2 rounded">{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {testCase.structuredData.examples && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-300 mb-1">Examples:</h4>
-                  <pre className="text-sm bg-gray-900 p-2 rounded overflow-x-auto">{testCase.structuredData.examples}</pre>
-                </div>
-              )}
-            </div>
-          ) : (
-            // Fallback to raw content if structured data is not available
-            <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown components={{ code: CodeBlock }}>
-                {testCase.content}
-              </ReactMarkdown>
-            </div>
-          )}
-          
-          <div className="mt-4 flex justify-end">
-            <button
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                localStorage.setItem('testCasesForAutomation', testCase.content);
-                const buttons = document.querySelectorAll('button');
-                const testCodeButton = Array.from(buttons).find(
-                  (button) => button.textContent.includes('Test Code Generator')
-                );
-                if (testCodeButton) {
-                  testCodeButton.click();
-                }
-              }}
-            >
-              Generate Code
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+import { 
+  generateProceduralMarkdown, 
+  generateGherkinMarkdown, 
+  processStructuredTestCases 
+} from '../utils/testCaseProcessor';
+import { 
+  processImageFiles,
+  clearAllImages,
+  removeImage
+} from '../utils/imageUtils';
+import TestCaseCard from './TestCaseCard';
+import CodeBlock from './CodeBlock';
+import SaveTestCasesModal from './SaveTestCasesModal';
 
 const TestCaseGenerator = () => {
   const [formData, setFormData] = useState({
@@ -270,7 +29,6 @@ const TestCaseGenerator = () => {
     refinementCount: 1
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
-  // eslint-disable-next-line no-unused-vars
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -310,7 +68,12 @@ const TestCaseGenerator = () => {
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
-      processImageFiles(files);
+      processImageFiles(
+        files, 
+        setImageFiles, 
+        setImagePreviews, 
+        setError
+      );
     }
   };
 
@@ -328,79 +91,21 @@ const TestCaseGenerator = () => {
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processImageFiles(Array.from(e.dataTransfer.files));
+      processImageFiles(
+        Array.from(e.dataTransfer.files),
+        setImageFiles,
+        setImagePreviews,
+        setError
+      );
     }
   };
 
-  const processImageFiles = (files) => {
-    const imageFiles = files.filter(file => file.type.match('image.*'));
-    
-    if (imageFiles.length === 0) {
-      setError('Please select image files (PNG, JPG, JPEG, etc.)');
-      return;
-    }
-
-    const totalSize = imageFiles.reduce((sum, file) => sum + file.size, 0);
-    if (totalSize > 16 * 1024 * 1024) {
-      setError('Total image size should be less than 16MB');
-      return;
-    }
-
-    setImageFiles(prevFiles => [...prevFiles, ...imageFiles]);
-    
-    imageFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        compressImage(reader.result, 0.7, (compressedDataUrl) => {
-          setImagePreviews(prev => [...prev, compressedDataUrl]);
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleClearAllImages = () => {
+    clearAllImages(setImageFiles, setImagePreviews, fileInputRef);
   };
 
-  const compressImage = (dataUrl, quality = 0.7, callback) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      
-      let width = img.width;
-      let height = img.height;
-      
-      const MAX_SIZE = 1600;
-      if (width > MAX_SIZE || height > MAX_SIZE) {
-        if (width > height) {
-          height = Math.round((height * MAX_SIZE) / width);
-          width = MAX_SIZE;
-        } else {
-          width = Math.round((width * MAX_SIZE) / height);
-          height = MAX_SIZE;
-        }
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-      callback(compressedDataUrl);
-    };
-    img.src = dataUrl;
-  };
-
-  const clearAllImages = () => {
-    setImageFiles([]);
-    setImagePreviews([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const removeImage = (index) => {
-    setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
+  const handleRemoveImage = (index) => {
+    removeImage(index, setImageFiles, setImagePreviews);
   };
 
   const onSubmit = async (e) => {
@@ -624,6 +329,113 @@ const TestCaseGenerator = () => {
     return true;
   };
 
+  const redirectToCodeGenerator = () => {
+    localStorage.setItem('testCasesForAutomation', result);
+    if (typeof window !== 'undefined') {
+      const buttons = document.querySelectorAll('button');
+      const testCodeButton = Array.from(buttons).find(
+        (button) => button.textContent.includes('Test Code Generator')
+      );
+      if (testCodeButton) {
+        testCodeButton.click();
+      }
+    }
+  };
+
+  // Render the image upload section
+  const renderImageUploadSection = () => (
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <label className="block text-sm font-medium">
+          Upload Screenshots:
+        </label>
+        {imagePreviews.length > 0 && (
+          <button
+            type="button"
+            onClick={handleClearAllImages}
+            className="text-xs text-red-400 hover:text-red-300"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+      <div
+        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+          isDragging 
+            ? 'border-blue-500 bg-blue-500/10' 
+            : imagePreviews.length > 0
+              ? 'border-green-500 bg-green-500/10' 
+              : 'border-gray-600 hover:border-gray-500'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageChange}
+          ref={fileInputRef}
+          multiple
+        />
+        
+        {imagePreviews.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-2">
+            {imagePreviews.map((preview, index) => (
+              <div key={index} className="relative" onClick={e => e.stopPropagation()}>
+                <img 
+                  src={preview} 
+                  alt={`Preview ${index + 1}`} 
+                  className="max-h-[160px] mx-auto rounded-lg border border-gray-700"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveImage(index);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <div className="text-xs text-gray-400 mt-1 text-center">Image {index + 1}</div>
+              </div>
+            ))}
+            <div 
+              className="flex items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-4 h-[160px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+            >
+              <div className="text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <p className="mt-1 text-sm text-gray-400">Add more</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8">
+            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="mt-2 text-sm text-gray-400">Drag and drop images here, or click to select multiple</p>
+            <p className="mt-1 text-xs text-gray-500">(Max total size: 16MB)</p>
+          </div>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-gray-400">
+        {imagePreviews.length > 0 ? `${imagePreviews.length} image(s) selected` : ''}
+      </p>
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-8">
       <div className="bg-gray-900 rounded-xl p-6">
@@ -692,96 +504,7 @@ const TestCaseGenerator = () => {
               </button>
             </div>
           ) : inputType === 'image' ? (
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium">
-                  Upload Screenshots:
-                </label>
-                {imagePreviews.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearAllImages}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-              <div
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  isDragging 
-                    ? 'border-blue-500 bg-blue-500/10' 
-                    : imagePreviews.length > 0
-                      ? 'border-green-500 bg-green-500/10' 
-                      : 'border-gray-600 hover:border-gray-500'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                  ref={fileInputRef}
-                  multiple
-                />
-                
-                {imagePreviews.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-2">
-                    {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative" onClick={e => e.stopPropagation()}>
-                        <img 
-                          src={preview} 
-                          alt={`Preview ${index + 1}`} 
-                          className="max-h-[160px] mx-auto rounded-lg border border-gray-700"
-                        />
-                        <button
-                          type="button"
-                          className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeImage(index);
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <div className="text-xs text-gray-400 mt-1 text-center">Image {index + 1}</div>
-                      </div>
-                    ))}
-                    <div 
-                      className="flex items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-4 h-[160px]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      <div className="text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        <p className="mt-1 text-sm text-gray-400">Add more</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-8">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="mt-2 text-sm text-gray-400">Drag and drop images here, or click to select multiple</p>
-                    <p className="mt-1 text-xs text-gray-500">(Max total size: 16MB)</p>
-                  </div>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-gray-400">
-                {imagePreviews.length > 0 ? `${imagePreviews.length} image(s) selected` : ''}
-              </p>
-            </div>
+            renderImageUploadSection()
           ) : (
             <div className="mb-6">
               <label htmlFor="swaggerUrl" className="block text-sm font-medium mb-2">
@@ -803,9 +526,11 @@ const TestCaseGenerator = () => {
             </div>
           )}
 
+          {/* Advanced configuration section */}
           <div className="mb-6">
             <h4 className="text-md font-medium mb-3 pb-1 border-b border-gray-700">Advanced Test Configuration</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              {/* Priority select */}
               <div>
                 <label htmlFor="priority" className="block text-sm font-medium mb-2">
                   Priority:
@@ -824,6 +549,7 @@ const TestCaseGenerator = () => {
                 </select>
               </div>
               
+              {/* Severity select */}
               <div>
                 <label htmlFor="severity" className="block text-sm font-medium mb-2">
                   Severity:
@@ -842,6 +568,7 @@ const TestCaseGenerator = () => {
                 </select>
               </div>
               
+              {/* Test Type select */}
               <div>
                 <label htmlFor="testType" className="block text-sm font-medium mb-2">
                   Test Type:
@@ -863,6 +590,7 @@ const TestCaseGenerator = () => {
                 </select>
               </div>
               
+              {/* Test Coverage select */}
               <div>
                 <label htmlFor="extendedOptions" className="block text-sm font-medium mb-2">
                   Test Coverage:
@@ -881,6 +609,7 @@ const TestCaseGenerator = () => {
                 </select>
               </div>
 
+              {/* Refinement count input */}
               <div>
                 <label htmlFor="refinementCount" className="block text-sm font-medium mb-2">
                   Refinement Iterations:
@@ -902,6 +631,7 @@ const TestCaseGenerator = () => {
             </div>
           </div>
 
+          {/* Output format and language section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label htmlFor="outputType" className="block text-sm font-medium mb-2">
@@ -939,6 +669,7 @@ const TestCaseGenerator = () => {
             </div>
           </div>
 
+          {/* Submit button */}
           <button 
             type="submit" 
             className={`w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors ${
@@ -951,6 +682,7 @@ const TestCaseGenerator = () => {
         </form>
       </div>
 
+      {/* Results section */}
       <div className="bg-gray-900 rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -980,18 +712,7 @@ const TestCaseGenerator = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  localStorage.setItem('testCasesForAutomation', result);
-                  if (typeof window !== 'undefined') {
-                    const buttons = document.querySelectorAll('button');
-                    const testCodeButton = Array.from(buttons).find(
-                      (button) => button.textContent.includes('Test Code Generator')
-                    );
-                    if (testCodeButton) {
-                      testCodeButton.click();
-                    }
-                  }
-                }}
+                onClick={redirectToCodeGenerator}
                 className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1 transition-colors"
               >
                 Use in Code Generator
@@ -1069,115 +790,19 @@ const TestCaseGenerator = () => {
         </div>
       </div>
 
-      {showSaveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Save Test Cases</h3>
-              <button
-                className="text-gray-400 hover:text-white"
-                onClick={() => setShowSaveModal(false)}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-sm text-gray-400">Select the test cases you want to save:</p>
-                <div className="flex gap-2">
-                  <button
-                    className="text-sm text-blue-400 hover:text-blue-300"
-                    onClick={selectAllTestCases}
-                  >
-                    Select All
-                  </button>
-                  <button
-                    className="text-sm text-blue-400 hover:text-blue-300"
-                    onClick={deselectAllTestCases}
-                  >
-                    Deselect All
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto mb-4">
-              {parsedTestCases.length === 0 ? (
-                <p className="text-gray-400 text-center py-4">No test cases found to save</p>
-              ) : (
-                <div className="space-y-3">
-                  {parsedTestCases.map((testCase) => (
-                    <div 
-                      key={testCase.id} 
-                      className="border border-gray-700 rounded-lg p-3 flex items-start gap-3"
-                    >
-                      <input
-                        type="checkbox"
-                        id={`tc-${testCase.id}`}
-                        checked={!!selectedTestCases[testCase.id]}
-                        onChange={() => toggleTestCase(testCase.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <label 
-                          htmlFor={`tc-${testCase.id}`} 
-                          className="font-medium cursor-pointer hover:text-blue-300"
-                        >
-                          {testCase.title}
-                        </label>
-                        <div className="mt-1 text-sm text-gray-400 line-clamp-2">
-                          {testCase.content.substring(0, 200)}...
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {saveMessage && (
-              <div className={`p-3 rounded-lg mb-4 ${
-                saveMessage.includes('Error') 
-                  ? 'bg-red-900/30 border border-red-800 text-red-200' 
-                  : 'bg-green-900/30 border border-green-800 text-green-200'
-              }`}>
-                {saveMessage}
-              </div>
-            )}
-            
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-                onClick={() => setShowSaveModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded flex items-center gap-2 ${
-                  saveInProgress ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                onClick={saveSelectedTestCases}
-                disabled={saveInProgress}
-              >
-                {saveInProgress ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Selected Test Cases'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Save Modal */}
+      <SaveTestCasesModal
+        showModal={showSaveModal}
+        setShowModal={setShowSaveModal}
+        parsedTestCases={parsedTestCases}
+        selectedTestCases={selectedTestCases}
+        toggleTestCase={toggleTestCase}
+        selectAllTestCases={selectAllTestCases}
+        deselectAllTestCases={deselectAllTestCases}
+        saveSelectedTestCases={saveSelectedTestCases}
+        saveInProgress={saveInProgress}
+        saveMessage={saveMessage}
+      />
     </div>
   );
 };
