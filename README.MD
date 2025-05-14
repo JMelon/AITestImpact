@@ -23,6 +23,7 @@ Objective: MVP of AI powered testing tools platform.
 
 #### Basic functionality:
 - AI generates test cases from acceptance critirea
+- AI generates test cases from UI screenshots
 - Smart suggestions for edge cases
 - Test quality insights
 - Natural language interface

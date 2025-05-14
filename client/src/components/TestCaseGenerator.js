@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -34,14 +34,117 @@ const TestCaseGenerator = () => {
     outputType: 'Procedural',
     language: 'English'
   });
+  const [inputType, setInputType] = useState('text'); // 'text' or 'image'
+  // eslint-disable-next-line no-unused-vars
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   const { acceptanceCriteria, outputType, language } = formData;
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleInputTypeChange = (type) => {
+    setInputType(type);
+    setError('');
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processImageFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const processImageFile = (file) => {
+    // Check if file is an image
+    if (!file.type.match('image.*')) {
+      setError('Please select an image file (PNG, JPG, JPEG, etc.)');
+      return;
+    }
+
+    // Check file size (max 8MB)
+    if (file.size > 8 * 1024 * 1024) {
+      setError('Image size should be less than 8MB');
+      return;
+    }
+
+    setImageFile(file);
+    
+    // Create image preview with compression
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      compressImage(reader.result, 0.7); // Compress image to 70% quality
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Function to compress image before sending
+  const compressImage = (dataUrl, quality = 0.7) => {
+    const img = new Image();
+    img.onload = () => {
+      // Create canvas for resizing large images
+      const canvas = document.createElement('canvas');
+      
+      // Resize if image is very large
+      let width = img.width;
+      let height = img.height;
+      
+      // Maximum dimensions (1600px for either dimension)
+      const MAX_SIZE = 1600;
+      if (width > MAX_SIZE || height > MAX_SIZE) {
+        if (width > height) {
+          height = Math.round((height * MAX_SIZE) / width);
+          width = MAX_SIZE;
+        } else {
+          width = Math.round((width * MAX_SIZE) / height);
+          height = MAX_SIZE;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Get compressed data URL
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      setImagePreview(compressedDataUrl);
+    };
+    img.src = dataUrl;
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const onSubmit = async (e) => {
@@ -51,7 +154,15 @@ const TestCaseGenerator = () => {
     setResult('');
 
     try {
-      const res = await axios.post('/api/generate-test-cases', formData);
+      let requestData = { ...formData };
+
+      if (inputType === 'image' && imagePreview) {
+        requestData.imageData = imagePreview;
+        requestData.acceptanceCriteria = ''; // Clear text input when sending image
+      }
+
+      // Use the full URL to avoid proxy issues
+      const res = await axios.post('http://localhost:5000/api/generate-test-cases', requestData);
       setResult(res.data.choices[0].message.content);
     } catch (err) {
       setError(
@@ -65,26 +176,119 @@ const TestCaseGenerator = () => {
     }
   };
 
+  const isSubmitDisabled = () => {
+    if (loading) return true;
+    if (inputType === 'text') return !acceptanceCriteria;
+    if (inputType === 'image') return !imagePreview;
+    return true;
+  };
+
   return (
     <div className="flex flex-col gap-8">
       {/* Input Panel - Always on top */}
       <div className="bg-gray-900 rounded-xl p-6">
-        <h3 className="text-xl font-semibold mb-6">Generate Test Cases</h3>
+        <h3 className="text-xl font-semibold mb-4">Generate Test Cases</h3>
+        
+        {/* Input type selector */}
+        <div className="flex mb-6 bg-gray-800 p-1 rounded-lg">
+          <button
+            type="button"
+            className={`flex-1 py-2 px-3 rounded-md transition-colors ${
+              inputType === 'text' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}
+            onClick={() => handleInputTypeChange('text')}
+          >
+            Text Input
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2 px-3 rounded-md transition-colors ${
+              inputType === 'image' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}
+            onClick={() => handleInputTypeChange('image')}
+          >
+            Image Input
+          </button>
+        </div>
+        
         <form onSubmit={onSubmit} className="flex flex-col">
-          <div className="mb-6">
-            <label htmlFor="acceptanceCriteria" className="block text-sm font-medium mb-2">
-              Acceptance Criteria:
-            </label>
-            <textarea
-              id="acceptanceCriteria"
-              name="acceptanceCriteria"
-              value={acceptanceCriteria}
-              onChange={onChange}
-              placeholder="Enter the acceptance criteria here..."
-              className="w-full min-h-[200px] max-h-[40vh] bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              required
-            ></textarea>
-          </div>
+          {inputType === 'text' ? (
+            <div className="mb-6">
+              <label htmlFor="acceptanceCriteria" className="block text-sm font-medium mb-2">
+                Acceptance Criteria:
+              </label>
+              <textarea
+                id="acceptanceCriteria"
+                name="acceptanceCriteria"
+                value={acceptanceCriteria}
+                onChange={onChange}
+                placeholder="Enter the acceptance criteria here..."
+                className="w-full min-h-[200px] max-h-[40vh] bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required={inputType === 'text'}
+              ></textarea>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">
+                Upload Screenshot:
+              </label>
+              <div
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  isDragging 
+                    ? 'border-blue-500 bg-blue-500/10' 
+                    : imagePreview 
+                      ? 'border-green-500 bg-green-500/10' 
+                      : 'border-gray-600 hover:border-gray-500'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                  ref={fileInputRef}
+                />
+                
+                {imagePreview ? (
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-[300px] mx-auto rounded-lg" 
+                    />
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearImage();
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-400">Drag and drop an image here, or click to select</p>
+                    <p className="mt-1 text-xs text-gray-500">(Max file size: 4MB)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
@@ -126,9 +330,9 @@ const TestCaseGenerator = () => {
           <button 
             type="submit" 
             className={`w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors ${
-              loading || !acceptanceCriteria ? 'opacity-50 cursor-not-allowed' : ''
+              isSubmitDisabled() ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-            disabled={loading || !acceptanceCriteria}
+            disabled={isSubmitDisabled()}
           >
             {loading ? 'Generating...' : 'Generate Test Cases'}
           </button>

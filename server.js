@@ -8,20 +8,48 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+
+// Increase the payload size limit for JSON requests (50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API route for generating test cases
 app.post('/api/generate-test-cases', async (req, res) => {
   try {
-    const { acceptanceCriteria, outputType, language } = req.body;
+    const { acceptanceCriteria, outputType, language, imageData } = req.body;
     
-    if (!acceptanceCriteria || !outputType || !language) {
+    if ((!acceptanceCriteria && !imageData) || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
-      messages: [
+    let messages = [];
+    
+    if (imageData) {
+      // For image-based test case generation
+      messages = [
+        {
+          role: 'system',
+          content: 'You generate Test Cases based on UI screenshots. Analyze the image to identify UI elements, features, and potential user interactions. Then generate comprehensive test cases. It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. The Test Case should contain a title (starting with Validate or Verify, when it\'s possible) and a description. Also, every step needs an Expected Result. But if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Generate test cases in ${outputType} format for the UI shown in the attached image. Use language: ${language}.`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageData,
+              }
+            }
+          ]
+        }
+      ];
+    } else {
+      // For text-based test case generation
+      messages = [
         {
           role: 'system',
           content: 'You generate Test Cases. It is really important that you do not use Gherkin if the user asked for Procedural, even if the Acceptance Criteria is in Gherkin. Also, the Test Case should contain a title (starting with Validate or Verify, when it\'s possible) and a description. Also, every step needs an Expected Result. But if the user chooses Gherkin, then you have to write it in Gherkin (using Given, When, Then).'
@@ -30,7 +58,12 @@ app.post('/api/generate-test-cases', async (req, res) => {
           role: 'user',
           content: `Generate test cases in ${outputType} format for the following acceptance criteria: "${acceptanceCriteria}". Use language: ${language}.`
         }
-      ]
+      ];
+    }
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-2025-04-14',
+      messages: messages
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,

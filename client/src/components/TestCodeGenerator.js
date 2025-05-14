@@ -55,7 +55,7 @@ const TestCodeGenerator = () => {
     setCopied(false);
 
     try {
-      const res = await axios.post('/api/generate-test-code', formData);
+      const res = await axios.post('http://localhost:5000/api/generate-test-code', formData);
       setResult(res.data.choices[0].message.content);
     } catch (err) {
       setError(

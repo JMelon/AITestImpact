@@ -159,7 +159,7 @@ const QualityAssessment = () => {
     setResult('');
 
     try {
-      const res = await axios.post('/api/generate-quality-assessment', {
+      const res = await axios.post('http://localhost:5000/api/generate-quality-assessment', {
         selectedPractices
       });
       setResult(res.data.choices[0].message.content);
