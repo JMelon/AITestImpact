@@ -239,6 +239,46 @@ app.post('/api/generate-test-code', async (req, res) => {
   }
 });
 
+// API route for refining test cases
+app.post('/api/refine-test-cases', async (req, res) => {
+  try {
+    const { testCases, outputType, language } = req.body;
+    
+    if (!testCases || !outputType || !language) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are an expert test engineer that improves existing test cases. Your task is to refine the given test cases by making them more comprehensive, finding edge cases that were missed, improving clarity, and ensuring complete coverage. Keep the same format as the original test cases. For Gherkin format, maintain the proper structure with Feature, Scenario, and steps. For Procedural format, ensure each test case has a clear ID, objective, preconditions, steps, and expected results.'
+      },
+      {
+        role: 'user',
+        content: `Please refine and improve the following ${outputType} test cases in ${language}. Make them more comprehensive, identify edge cases, improve clarity, and ensure complete coverage while maintaining the same format:\n\n${testCases}`
+      }
+    ];
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-2025-04-14',
+      messages: messages
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return res.json(response.data);
+  } catch (error) {
+    console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
+    return res.status(500).json({ 
+      error: 'Error refining test cases', 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
 // Helper function to determine unselected practices
 function getUnselectedPractices(selectedPractices) {
   const allPractices = [

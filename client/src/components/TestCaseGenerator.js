@@ -37,7 +37,8 @@ const TestCaseGenerator = () => {
     priority: 'P2-Medium',
     severity: 'Major',
     testType: 'Functional',
-    extendedOptions: 'Happy paths'
+    extendedOptions: 'Happy paths',
+    refinementCount: 1
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
   // eslint-disable-next-line no-unused-vars
@@ -47,6 +48,8 @@ const TestCaseGenerator = () => {
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentRefinement, setCurrentRefinement] = useState(0);
+  const [originalResult, setOriginalResult] = useState('');
   const fileInputRef = useRef(null);
 
   const { 
@@ -57,7 +60,8 @@ const TestCaseGenerator = () => {
     priority,
     severity,
     testType,
-    extendedOptions 
+    extendedOptions,
+    refinementCount
   } = formData;
 
   const onChange = (e) => {
@@ -166,26 +170,50 @@ const TestCaseGenerator = () => {
     setLoading(true);
     setError('');
     setResult('');
+    setCurrentRefinement(0);
+    setOriginalResult('');
 
     try {
       let requestData = { ...formData };
 
+      // Setup request data as before
       if (inputType === 'image' && imagePreview) {
         requestData.imageData = imagePreview;
-        requestData.acceptanceCriteria = ''; // Clear text input when sending image
-        requestData.swaggerUrl = ''; // Clear swagger URL when sending image
+        requestData.acceptanceCriteria = ''; 
+        requestData.swaggerUrl = ''; 
       } else if (inputType === 'swagger') {
-        requestData.imageData = ''; // Clear image data when sending swagger URL
-        requestData.acceptanceCriteria = ''; // Clear text input when sending swagger URL
+        requestData.imageData = ''; 
+        requestData.acceptanceCriteria = ''; 
       } else {
-        // Text input
-        requestData.imageData = ''; // Clear image data when sending text
-        requestData.swaggerUrl = ''; // Clear swagger URL when sending text
+        requestData.imageData = ''; 
+        requestData.swaggerUrl = ''; 
       }
 
-      // Use the full URL to avoid proxy issues
-      const res = await axios.post('http://localhost:5000/api/generate-test-cases', requestData);
-      setResult(res.data.choices[0].message.content);
+      // Initial test case generation
+      let currentTestCases = '';
+      
+      // Initial API call to generate test cases
+      const initialResponse = await axios.post('http://localhost:5000/api/generate-test-cases', requestData);
+      currentTestCases = initialResponse.data.choices[0].message.content;
+      setOriginalResult(currentTestCases);
+      setResult(currentTestCases);
+      setCurrentRefinement(1);
+      
+      // Perform refinement iterations if refinementCount > 1
+      for (let i = 1; i < parseInt(refinementCount); i++) {
+        if (currentTestCases) {
+          // Only continue if we have test cases to refine
+          const refinementResponse = await axios.post('http://localhost:5000/api/refine-test-cases', {
+            testCases: currentTestCases,
+            outputType,
+            language
+          });
+          
+          currentTestCases = refinementResponse.data.choices[0].message.content;
+          setResult(currentTestCases);
+          setCurrentRefinement(i + 1);
+        }
+      }
     } catch (err) {
       setError(
         err.response?.data?.details || 
@@ -431,6 +459,25 @@ const TestCaseGenerator = () => {
                   <option value="All possible paths">All possible paths</option>
                 </select>
               </div>
+
+              <div>
+                <label htmlFor="refinementCount" className="block text-sm font-medium mb-2">
+                  Refinement Iterations:
+                </label>
+                <input
+                  type="number"
+                  id="refinementCount"
+                  name="refinementCount"
+                  value={refinementCount}
+                  onChange={onChange}
+                  min="1"
+                  max="5"
+                  className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Number of times to refine test cases (1-5)
+                </p>
+              </div>
             </div>
           </div>
 
@@ -486,7 +533,22 @@ const TestCaseGenerator = () => {
       {/* Output Panel - Always below */}
       <div className="bg-gray-900 rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold">Generated Test Cases</h3>
+          <div>
+            <h3 className="text-xl font-semibold">Generated Test Cases</h3>
+            {currentRefinement > 0 && (
+              <p className="text-sm text-gray-400">
+                Refinement: {currentRefinement} of {refinementCount}
+                {currentRefinement > 1 && (
+                  <button
+                    onClick={() => setResult(originalResult)}
+                    className="ml-2 text-blue-400 hover:text-blue-300 underline"
+                  >
+                    View original
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
           {result && (
             <button
               type="button"
@@ -512,8 +574,20 @@ const TestCaseGenerator = () => {
           )}
         </div>
         {loading && (
-          <div className="flex items-center justify-center py-16 text-gray-400">
-            <div className="animate-pulse">Generating test cases, please wait...</div>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <div className="animate-pulse mb-2">
+              {currentRefinement === 0 
+                ? "Generating test cases, please wait..." 
+                : `Refining test cases (${currentRefinement}/${refinementCount}), please wait...`}
+            </div>
+            {currentRefinement > 0 && (
+              <div className="w-full max-w-md bg-gray-700 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full" 
+                  style={{ width: `${(currentRefinement / refinementCount) * 100}%` }}
+                ></div>
+              </div>
+            )}
           </div>
         )}
         {error && (
