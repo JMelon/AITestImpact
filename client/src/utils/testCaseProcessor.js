@@ -113,47 +113,89 @@ export const generateProceduralMarkdown = (tc) => {
 
 /**
  * Generate markdown content from Gherkin test case structure
- * @param {Object} tc - Structured Gherkin test case
+ * @param {Object} testCase - Structured Gherkin test case
  * @returns {String} Markdown formatted test case
  */
-export const generateGherkinMarkdown = (tc) => {
-  let markdown = `Feature: ${tc.feature}\n`;
+export const generateGherkinMarkdown = (testCase) => {
+  // Start with just a clean code block - no header text
+  let markdown = "```gherkin\n";
   
-  if (tc.featureDescription) {
-    markdown += `${tc.featureDescription}\n\n`;
+  // Add Feature and its description
+  markdown += `Feature: ${testCase.feature || testCase.title}\n`;
+  if (testCase.featureDescription) {
+    markdown += `  ${testCase.featureDescription}\n`;
+  }
+  markdown += '\n';
+  
+  // Add Background if present
+  if (testCase.background) {
+    markdown += `Background:\n${testCase.background}\n\n`;
   }
   
-  if (tc.background) {
-    markdown += `Background:\n${tc.background}\n\n`;
+  // Add tags at the scenario level, not feature level
+  if (testCase.tags && testCase.tags.length > 0) {
+    testCase.tags.forEach(tag => {
+      // Make sure we only have one @ symbol per tag
+      const cleanTag = tag.startsWith('@') ? tag : `@${tag}`;
+      markdown += `${cleanTag} `;
+    });
+    markdown += '\n';
   }
   
-  if (tc.tags && tc.tags.length > 0) {
-    markdown += `${tc.tags.join(' ')}\n`;
-  }
+  // Add Scenario
+  markdown += `${testCase.scenarioType || 'Scenario'}: ${testCase.title}\n`;
   
-  markdown += `${tc.scenarioType || 'Scenario'}: ${tc.title}\n`;
+  // Fix for handling steps with possible "And" or "But" prefixes
+  const formatStep = (step, prefix) => {
+    // First, remove the main prefix if already present
+    let cleanStep = step;
+    if (step.startsWith(`${prefix} `)) {
+      cleanStep = step.substring(prefix.length + 1);
+    }
+    
+    // Check if the step starts with "And" or "But"
+    if (cleanStep.startsWith('And ') || cleanStep.startsWith('But ')) {
+      // Keep the "And" or "But" as is, don't prepend the main prefix
+      return `  ${cleanStep}`;
+    } else {
+      // Regular step, add proper prefix
+      return `  ${prefix} ${cleanStep}`;
+    }
+  };
   
-  if (tc.givenSteps && tc.givenSteps.length > 0) {
-    tc.givenSteps.forEach((step, i) => {
-      markdown += i === 0 ? `  Given ${step}\n` : `  And ${step}\n`;
+  // Add Given steps
+  if (testCase.givenSteps && testCase.givenSteps.length > 0) {
+    testCase.givenSteps.forEach(step => {
+      if (step) {
+        markdown += formatStep(step, 'Given') + '\n';
+      }
     });
   }
   
-  if (tc.whenSteps && tc.whenSteps.length > 0) {
-    tc.whenSteps.forEach((step, i) => {
-      markdown += i === 0 ? `  When ${step}\n` : `  And ${step}\n`;
+  // Add When steps
+  if (testCase.whenSteps && testCase.whenSteps.length > 0) {
+    testCase.whenSteps.forEach(step => {
+      if (step) {
+        markdown += formatStep(step, 'When') + '\n';
+      }
     });
   }
   
-  if (tc.thenSteps && tc.thenSteps.length > 0) {
-    tc.thenSteps.forEach((step, i) => {
-      markdown += i === 0 ? `  Then ${step}\n` : `  And ${step}\n`;
+  // Add Then steps
+  if (testCase.thenSteps && testCase.thenSteps.length > 0) {
+    testCase.thenSteps.forEach(step => {
+      if (step) {
+        markdown += formatStep(step, 'Then') + '\n';
+      }
     });
   }
   
-  if (tc.examples) {
-    markdown += `\nExamples:\n${tc.examples}\n`;
+  // Add Examples if present
+  if (testCase.examples) {
+    markdown += `\nExamples:\n${testCase.examples}\n`;
   }
+  
+  markdown += "\n```\n";
   
   return markdown;
 };
