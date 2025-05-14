@@ -40,10 +40,11 @@ const TestCaseGenerator = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="flex flex-col gap-8">
+      {/* Input Panel - Always on top */}
       <div className="bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-6">Generate Test Cases</h3>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="flex flex-col">
           <div className="mb-6">
             <label htmlFor="acceptanceCriteria" className="block text-sm font-medium mb-2">
               Acceptance Criteria:
@@ -54,12 +55,12 @@ const TestCaseGenerator = () => {
               value={acceptanceCriteria}
               onChange={onChange}
               placeholder="Enter the acceptance criteria here..."
-              className="w-full h-56 bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              className="w-full min-h-[200px] max-h-[40vh] bg-gray-800 border border-gray-700 p-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
             ></textarea>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label htmlFor="outputType" className="block text-sm font-medium mb-2">
                 Output Format:
@@ -98,7 +99,7 @@ const TestCaseGenerator = () => {
 
           <button 
             type="submit" 
-            className={`w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors ${
+            className={`w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors ${
               loading || !acceptanceCriteria ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             disabled={loading || !acceptanceCriteria}
@@ -108,10 +109,11 @@ const TestCaseGenerator = () => {
         </form>
       </div>
 
+      {/* Output Panel - Always below */}
       <div className="bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-6">Generated Test Cases</h3>
         {loading && (
-          <div className="flex items-center justify-center h-56 text-gray-400">
+          <div className="flex items-center justify-center py-16 text-gray-400">
             <div className="animate-pulse">Generating test cases, please wait...</div>
           </div>
         )}
@@ -120,7 +122,7 @@ const TestCaseGenerator = () => {
             {error}
           </div>
         )}
-        <div className="h-56 overflow-auto bg-gray-800 border border-gray-700 p-4 rounded-lg">
+        <div className="max-h-[50vh] overflow-auto bg-gray-800 border border-gray-700 p-4 rounded-lg">
           {result && (
             <div className="prose prose-invert prose-sm max-w-none">
               <ReactMarkdown>{result}</ReactMarkdown>
