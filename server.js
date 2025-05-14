@@ -16,10 +16,70 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // API route for generating test cases
 app.post('/api/generate-test-cases', async (req, res) => {
   try {
-    const { acceptanceCriteria, outputType, language, imageData, swaggerUrl } = req.body;
+    const { 
+      acceptanceCriteria, 
+      outputType, 
+      language, 
+      imageData, 
+      swaggerUrl,
+      priority,
+      severity,
+      testType,
+      extendedOptions
+    } = req.body;
     
     if ((!acceptanceCriteria && !imageData && !swaggerUrl) || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Convert coverage option to tag-friendly format (remove spaces)
+    const coverageTag = extendedOptions ? extendedOptions.replace(/\s+/g, '') : 'HappyPaths';
+
+    // Add special instructions for Gherkin format
+    let testConfigInfo = `
+Testing Configuration:
+- Priority: ${priority || 'P2-Medium'}
+- Severity: ${severity || 'Major'}
+- Test Type: ${testType || 'Functional'}
+- Test Coverage: ${extendedOptions || 'Happy paths'}
+
+When generating test cases, please consider the priority, severity, test type, and test coverage specified above. Focus on creating tests that align with these parameters.`;
+
+    // Add Gherkin-specific instructions if outputType is Gherkin
+    if (outputType === 'Gherkin') {
+      testConfigInfo += `
+
+For Gherkin format, please provide a COMPLETE feature file with proper structure, including:
+1. Feature name and description at the top
+2. Background section if applicable
+3. Multiple scenarios with the following tags at the beginning of EACH scenario:
+   @${priority || 'P2-Medium'} @${severity || 'Major'} @${testType || 'Functional'} @${coverageTag}
+
+Example:
+Feature: User Authentication
+  As a user
+  I want to be able to authenticate with the system
+  So that I can access my account
+
+  Background:
+    Given the application is running
+    And I am on the login page
+
+  @P2-Medium @Major @Functional @HappyPaths
+  Scenario: User successfully logs in with valid credentials
+    When I enter valid username and password
+    And I click the login button
+    Then I should be redirected to the dashboard
+    And I should see a welcome message
+
+  @P1-High @Critical @Security @NegativePaths
+  Scenario: User cannot login with invalid credentials
+    When I enter invalid username and password
+    And I click the login button
+    Then I should see an error message
+    And I should remain on the login page
+
+Please generate at least 4-6 complete scenarios covering different aspects of the functionality.`;
     }
 
     let messages = [];
@@ -34,7 +94,7 @@ app.post('/api/generate-test-cases', async (req, res) => {
         messages = [
           {
             role: 'system',
-            content: 'You generate Test Cases based on Swagger/OpenAPI documentation. Analyze the API endpoints, their parameters, responses, and schemas to create comprehensive test cases. Focus on functional tests, edge cases, error handling, and data validation. It is really important that you do not use Gherkin if the user asked for Procedural. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-API-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+            content: `You generate Test Cases based on Swagger/OpenAPI documentation. Analyze the API endpoints, their parameters, responses, and schemas to create comprehensive test cases. Focus on functional tests, edge cases, error handling, and data validation. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-API-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
           },
           {
             role: 'user',
@@ -49,7 +109,7 @@ app.post('/api/generate-test-cases', async (req, res) => {
       messages = [
         {
           role: 'system',
-          content: 'You generate Test Cases based on UI screenshots. Analyze the image to identify UI elements, features, and potential user interactions. Then generate comprehensive test cases. It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-UI-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+          content: `You generate Test Cases based on UI screenshots. Analyze the image to identify UI elements, features, and potential user interactions. Then generate comprehensive test cases. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-UI-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
         },
         {
           role: 'user',
@@ -72,7 +132,7 @@ app.post('/api/generate-test-cases', async (req, res) => {
       messages = [
         {
           role: 'system',
-          content: 'You generate Test Cases. It is really important that you do not use Gherkin if the user asked for Procedural, even if the Acceptance Criteria is in Gherkin. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-FUNC-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
+          content: `You generate Test Cases. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural, even if the Acceptance Criteria is in Gherkin. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-FUNC-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
         },
         {
           role: 'user',

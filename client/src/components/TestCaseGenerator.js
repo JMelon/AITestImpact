@@ -33,7 +33,11 @@ const TestCaseGenerator = () => {
     acceptanceCriteria: '',
     outputType: 'Procedural',
     language: 'English',
-    swaggerUrl: ''
+    swaggerUrl: '',
+    priority: 'P2-Medium',
+    severity: 'Major',
+    testType: 'Functional',
+    extendedOptions: 'Happy paths'
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
   // eslint-disable-next-line no-unused-vars
@@ -45,7 +49,16 @@ const TestCaseGenerator = () => {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
-  const { acceptanceCriteria, outputType, language, swaggerUrl } = formData;
+  const { 
+    acceptanceCriteria, 
+    outputType, 
+    language, 
+    swaggerUrl,
+    priority,
+    severity,
+    testType,
+    extendedOptions 
+  } = formData;
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -339,6 +352,87 @@ const TestCaseGenerator = () => {
               </p>
             </div>
           )}
+
+          {/* Advanced Test Configuration */}
+          <div className="mb-6">
+            <h4 className="text-md font-medium mb-3 pb-1 border-b border-gray-700">Advanced Test Configuration</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label htmlFor="priority" className="block text-sm font-medium mb-2">
+                  Priority:
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  value={priority}
+                  onChange={onChange}
+                  className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="P0-Critical">P0-Critical</option>
+                  <option value="P1-High">P1-High</option>
+                  <option value="P2-Medium">P2-Medium</option>
+                  <option value="P3-Low">P3-Low</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="severity" className="block text-sm font-medium mb-2">
+                  Severity:
+                </label>
+                <select
+                  id="severity"
+                  name="severity"
+                  value={severity}
+                  onChange={onChange}
+                  className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Blocker">Blocker</option>
+                  <option value="Critical">Critical</option>
+                  <option value="Major">Major</option>
+                  <option value="Minor">Minor</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="testType" className="block text-sm font-medium mb-2">
+                  Test Type:
+                </label>
+                <select
+                  id="testType"
+                  name="testType"
+                  value={testType}
+                  onChange={onChange}
+                  className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Functional">Functional</option>
+                  <option value="Performance">Performance</option>
+                  <option value="Security">Security</option>
+                  <option value="Usability">Usability</option>
+                  <option value="Localization">Localization</option>
+                  <option value="Accessibility">Accessibility</option>
+                  <option value="Compatibility">Compatibility</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="extendedOptions" className="block text-sm font-medium mb-2">
+                  Test Coverage:
+                </label>
+                <select
+                  id="extendedOptions"
+                  name="extendedOptions"
+                  value={extendedOptions}
+                  onChange={onChange}
+                  className="w-full bg-gray-800 border border-gray-700 py-2 px-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Happy paths">Happy paths</option>
+                  <option value="Negative paths">Negative paths</option>
+                  <option value="Edge cases">Edge cases</option>
+                  <option value="All possible paths">All possible paths</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
