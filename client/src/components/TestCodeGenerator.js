@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -80,6 +80,19 @@ const TestCodeGenerator = () => {
       }
     );
   };
+
+  // Check for test cases passed from TestCaseGenerator
+  useEffect(() => {
+    const savedTestCases = localStorage.getItem('testCasesForAutomation');
+    if (savedTestCases) {
+      setFormData(prev => ({
+        ...prev,
+        testCase: savedTestCases
+      }));
+      // Clear the storage after using it
+      localStorage.removeItem('testCasesForAutomation');
+    }
+  }, []);
 
   // Determine the language for syntax highlighting based on framework
   const getLanguage = () => {

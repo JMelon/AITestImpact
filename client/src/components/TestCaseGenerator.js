@@ -391,7 +391,32 @@ const TestCaseGenerator = () => {
 
       {/* Output Panel - Always below */}
       <div className="bg-gray-900 rounded-xl p-6">
-        <h3 className="text-xl font-semibold mb-6">Generated Test Cases</h3>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">Generated Test Cases</h3>
+          {result && (
+            <button
+              type="button"
+              onClick={() => {
+                // Store the test cases in localStorage
+                localStorage.setItem('testCasesForAutomation', result);
+                // Switch to the TestCodeGenerator tool
+                if (typeof window !== 'undefined') {
+                  // Find the button for Test Code Generator and click it
+                  const buttons = document.querySelectorAll('button');
+                  const testCodeButton = Array.from(buttons).find(
+                    (button) => button.textContent.includes('Test Code Generator')
+                  );
+                  if (testCodeButton) {
+                    testCodeButton.click();
+                  }
+                }
+              }}
+              className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1 transition-colors"
+            >
+              Use in Code Generator
+            </button>
+          )}
+        </div>
         {loading && (
           <div className="flex items-center justify-center py-16 text-gray-400">
             <div className="animate-pulse">Generating test cases, please wait...</div>
