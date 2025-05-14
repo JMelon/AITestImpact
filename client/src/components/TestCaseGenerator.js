@@ -36,6 +36,7 @@ const TestCaseGenerator = () => {
     swaggerUrl: ''
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
+  // eslint-disable-next-line no-unused-vars
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [isDragging, setIsDragging] = useState(false);
