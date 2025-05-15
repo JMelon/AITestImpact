@@ -913,7 +913,8 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
           )
         )}
         
-        <div className="max-h-[50vh] overflow-auto">
+        {/* Changed from fixed height with scrolling to full width with natural height */}
+        <div className="w-full">
           {parsedTestCases.length > 0 ? (
             <div className="space-y-4">
               {parsedTestCases.map((testCase) => (
