@@ -94,6 +94,16 @@ app.post('/api/generate-test-cases', async (req, res) => {
     if ((!acceptanceCriteria && !imageData && !imageDataArray && !swaggerUrl) || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // Get API token from request header
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
+    }
 
     // Convert coverage option to tag-friendly format (remove spaces)
     const coverageTag = extendedOptions ? extendedOptions.replace(/\s+/g, '') : 'HappyPaths';
@@ -320,7 +330,7 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
       max_tokens: 4000,
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
       },
       timeout: 60000
@@ -376,7 +386,7 @@ Return only the fixed JSON object with no additional text.`
               temperature: 0.7,
             }, {
               headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Authorization': `Bearer ${apiToken}`,
                 'Content-Type': 'application/json'
               }
             });
@@ -415,8 +425,15 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       return res.status(400).json({ error: 'Test cases are required' });
     }
 
-    // API token can come from request header or environment
-    const apiToken = req.headers['x-openai-token'] || process.env.OPENAI_API_KEY;
+    // API token can come from request header only
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
+    }
 
     // Format prompt based on input type
     let prompt = '';
@@ -694,6 +711,16 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
     if (!selectedPractices) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // Get API token from request header
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
+    }
 
     const unselectedPractices = getUnselectedPractices(selectedPractices);
 
@@ -711,7 +738,7 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -734,6 +761,16 @@ app.post('/api/generate-test-code', async (req, res) => {
     if (!testCase || !framework) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // Get API token from request header
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
+    }
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4.1-2025-04-14',
@@ -749,7 +786,7 @@ app.post('/api/generate-test-code', async (req, res) => {
       ]
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -771,6 +808,16 @@ app.post('/api/refine-test-cases', async (req, res) => {
     
     if (!testCases || !outputType || !language) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Get API token from request header
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
     }
 
     const messages = [
@@ -803,7 +850,7 @@ app.post('/api/refine-test-cases', async (req, res) => {
       max_tokens: 4000,
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
       },
       timeout: 60000
@@ -826,6 +873,16 @@ app.post('/api/review-requirements', async (req, res) => {
     
     if (!requirements) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Get API token from request header
+    const apiToken = req.headers['x-openai-token'];
+    
+    if (!apiToken) {
+      return res.status(400).json({ 
+        error: 'OpenAI API key is required', 
+        details: 'Please configure your API key in the settings page' 
+      });
     }
 
     // Always use comprehensive analysis with all focus areas
@@ -859,7 +916,7 @@ Provide a structured analysis with clear categories of findings, specific refere
       messages: messages
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json'
       }
     });

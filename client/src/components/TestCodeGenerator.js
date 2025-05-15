@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ApiKeyCheck from './common/ApiKeyCheck';
+import { useToken } from '../context/TokenContext';
 
-const TestCodeGenerator = () => {
+const TestCodeGenerator = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
     testCase: '',
     framework: 'Playwright (JavaScript)'
@@ -14,6 +16,7 @@ const TestCodeGenerator = () => {
   const [copied, setCopied] = useState(false);
 
   const { testCase, framework } = formData;
+  const { apiToken } = useToken();
 
   const frameworks = [
     "Selenium WebDriver (Java)",
@@ -47,23 +50,35 @@ const TestCodeGenerator = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const onSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(null);
     setResult('');
     setCopied(false);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/generate-test-code', formData);
-      setResult(res.data.choices[0].message.content);
-    } catch (err) {
+      if (!apiToken) {
+        throw new Error('OpenAI API key is required. Please configure it in the settings.');
+      }
+
+      const response = await axios.post('http://localhost:5000/api/generate-test-code', {
+        testCase,
+        framework
+      }, {
+        headers: {
+          'x-openai-token': apiToken
+        }
+      });
+
+      setResult(response.data.choices[0].message.content);
+    } catch (error) {
       setError(
-        err.response?.data?.details || 
-        err.response?.data?.error || 
+        error.response?.data?.details || 
+        error.response?.data?.error || 
         'Failed to generate test code. Please try again.'
       );
-      console.error('Error:', err);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
@@ -109,11 +124,13 @@ const TestCodeGenerator = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Input Panel - Always on top */}
-      <div className="bg-gray-900 rounded-xl p-6">
+    <div className="flex flex-col md:flex-row gap-6">
+      <ApiKeyCheck setActiveComponent={setActiveComponent} />
+
+      {/* Left Panel */}
+      <div className="w-full md:w-1/2 bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-6">Generate Test Automation Code</h3>
-        <form onSubmit={onSubmit} className="flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col">
           <div className="mb-6">
             <label htmlFor="testCase" className="block text-sm font-medium mb-2">
               Test Case:
@@ -160,8 +177,8 @@ const TestCodeGenerator = () => {
         </form>
       </div>
 
-      {/* Output Panel - Always below */}
-      <div className="bg-gray-900 rounded-xl p-6">
+      {/* Output Panel */}
+      <div className="w-full md:w-1/2 bg-gray-900 rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold">Generated Test Code</h3>
           {result && (

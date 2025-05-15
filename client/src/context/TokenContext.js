@@ -1,47 +1,39 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+// Create the context
 const TokenContext = createContext();
 
+// Custom hook to use the token context
+export const useToken = () => useContext(TokenContext);
+
+// Provider component
 export const TokenProvider = ({ children }) => {
-  const [apiToken, setApiToken] = useState(() => {
-    // Initialize from localStorage if available
-    return localStorage.getItem('openaiApiToken') || '';
-  });
-  
-  const [hasAcceptedNoToken, setHasAcceptedNoToken] = useState(() => {
-    return localStorage.getItem('hasAcceptedNoToken') === 'true';
-  });
+  const [apiToken, setApiTokenState] = useState('');
 
-  // Save token to localStorage when it changes
+  // On component mount, try to load token from localStorage
   useEffect(() => {
-    if (apiToken) {
-      localStorage.setItem('openaiApiToken', apiToken);
-    } else {
-      localStorage.removeItem('openaiApiToken');
+    const storedToken = localStorage.getItem('openai_api_token');
+    if (storedToken) {
+      setApiTokenState(storedToken);
     }
-  }, [apiToken]);
+  }, []);
 
-  // Save acceptance state to localStorage
-  useEffect(() => {
-    localStorage.setItem('hasAcceptedNoToken', hasAcceptedNoToken);
-  }, [hasAcceptedNoToken]);
-
-  const clearToken = () => {
-    setApiToken('');
-    localStorage.removeItem('openaiApiToken');
+  // Custom setter that also updates localStorage
+  const setApiToken = (token) => {
+    if (token) {
+      localStorage.setItem('openai_api_token', token);
+    } else {
+      localStorage.removeItem('openai_api_token');
+    }
+    setApiTokenState(token);
   };
 
-  const acceptNoToken = () => {
-    setHasAcceptedNoToken(true);
-  };
-
+  // Provide the token and setter to children
   return (
-    <TokenContext.Provider value={{ apiToken, setApiToken, clearToken, hasAcceptedNoToken, acceptNoToken }}>
+    <TokenContext.Provider value={{ apiToken, setApiToken }}>
       {children}
     </TokenContext.Provider>
   );
 };
-
-export const useToken = () => useContext(TokenContext);
 
 export default TokenContext;

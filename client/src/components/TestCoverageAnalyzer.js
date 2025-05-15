@@ -2,10 +2,11 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import CodeBlock from './CodeBlock';
+import ApiKeyCheck from './common/ApiKeyCheck';
 import { processImageFiles, clearAllImages, removeImage } from '../utils/imageUtils';
 import { useToken } from '../context/TokenContext';
 
-const TestCoverageAnalyzer = () => {
+const TestCoverageAnalyzer = ({ setActiveComponent }) => {
   const [requirements, setRequirements] = useState('');
   const [testCases, setTestCases] = useState('');
   const [inputType, setInputType] = useState('text'); // 'text', 'image', 'swagger'
@@ -253,6 +254,8 @@ const TestCoverageAnalyzer = () => {
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
+      <ApiKeyCheck setActiveComponent={setActiveComponent} />
+      
       {/* Left Panel - Inputs */}
       <div className="w-full md:w-1/2 bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-4">Test Coverage Analyzer</h3>

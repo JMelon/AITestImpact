@@ -17,6 +17,7 @@ import CodeBlock from './CodeBlock';
 import SaveTestCasesModal from './SaveTestCasesModal';
 import CoverageReport from './CoverageReport';
 import { useToken } from '../context/TokenContext';
+import ApiKeyCheck from './common/ApiKeyCheck';
 
 const TestCaseGenerator = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
@@ -143,6 +144,11 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
     setSelectedTestCases({});
 
     try {
+      // Check if API token exists
+      if (!apiToken) {
+        throw new Error('OpenAI API key is required. Please configure it in the settings page.');
+      }
+
       let requestData = { ...formData };
 
       if (inputType === 'image' && imagePreviews.length > 0) {
@@ -157,7 +163,12 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
         requestData.swaggerUrl = ''; 
       }
 
-      const initialResponse = await axios.post('http://localhost:5000/api/generate-test-cases', requestData);
+      // Add headers with API token
+      const headers = {
+        'x-openai-token': apiToken
+      };
+
+      const initialResponse = await axios.post('http://localhost:5000/api/generate-test-cases', requestData, { headers });
       
       // Add logging for the API response
       console.log('OpenAI API Response:', initialResponse.data);
@@ -225,7 +236,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
             testCases: responseContent,
             outputType,
             language
-          });
+          }, { headers });
           
           responseContent = refinementResponse.data.choices[0].message.content;
           setResult(responseContent);
@@ -531,7 +542,7 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
         ) : (
           <div className="py-8">
             <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 002-2V6a2 2 002-2H6a2 2 00-2 2v12a2 2 002 2z" />
             </svg>
             <p className="mt-2 text-sm text-gray-400">Drag and drop images here, or click to select multiple</p>
             <p className="mt-1 text-xs text-gray-500">(Max total size: 16MB)</p>
@@ -546,6 +557,8 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
 
   return (
     <div className="flex flex-col gap-8">
+      <ApiKeyCheck setActiveComponent={setActiveComponent} />
+      
       <div className="bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-4">Generate Test Cases</h3>
         

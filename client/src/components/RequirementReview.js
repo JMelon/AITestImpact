@@ -3,6 +3,8 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ApiKeyCheck from './common/ApiKeyCheck';
+import { useToken } from '../context/TokenContext';
 
 // Custom renderer for code blocks in Markdown
 const CodeBlock = ({ node, inline, className, children, ...props }) => {
@@ -28,21 +30,30 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
   );
 };
 
-const RequirementReview = () => {
+const RequirementReview = ({ setActiveComponent }) => {
   const [requirements, setRequirements] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { apiToken } = useToken();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(null);
     setResult('');
 
     try {
+      if (!apiToken) {
+        throw new Error('OpenAI API key is required. Please configure it in the settings.');
+      }
+
       const response = await axios.post('http://localhost:5000/api/review-requirements', {
         requirements
+      }, {
+        headers: {
+          'x-openai-token': apiToken
+        }
       });
       setResult(response.data.choices[0].message.content);
     } catch (err) {
@@ -78,9 +89,11 @@ const RequirementReview = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Input Panel */}
-      <div className="bg-gray-900 rounded-xl p-6">
+    <div className="flex flex-col md:flex-row gap-6">
+      <ApiKeyCheck setActiveComponent={setActiveComponent} />
+
+      {/* Left Panel */}
+      <div className="w-full md:w-1/2 bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-4">Requirement Review</h3>
         
         <form onSubmit={handleSubmit} className="flex flex-col">
@@ -117,8 +130,8 @@ const RequirementReview = () => {
         </form>
       </div>
 
-      {/* Output Panel */}
-      <div className="bg-gray-900 rounded-xl p-6">
+      {/* Right Panel */}
+      <div className="w-full md:w-1/2 bg-gray-900 rounded-xl p-6">
         <h3 className="text-xl font-semibold mb-6">Analysis Results</h3>
         
         {loading && (
