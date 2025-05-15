@@ -31,7 +31,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
     refinementCount: 1
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
-  const [imageFilesState, setImageFiles] = useState([]);
+  const [, setImageFiles] = useState([]);  // Only using the setter, not the state value
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState('');
@@ -507,7 +507,7 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
                   }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 011.414 1.414L11.414 10l4.293 4.293a1 1 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 01-1.414-1.414L8.586 10 4.293 5.707a1 1 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <div className="text-xs text-gray-400 mt-1 text-center">Image {index + 1}</div>

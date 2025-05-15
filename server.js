@@ -20,10 +20,7 @@ const enableMongoDB = process.env.ENABLE_MONGODB === 'true';
 
 if (enableMongoDB) {
   console.log('MongoDB integration enabled, attempting to connect...');
-  mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('MongoDB connected successfully'))
     .catch(err => {
       console.error('MongoDB connection error:', err.message);
