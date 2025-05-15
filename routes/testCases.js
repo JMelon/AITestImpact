@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const TestCase = require('../models/TestCase');
 
@@ -12,7 +13,57 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get test case by ID
+// Add the stats endpoint BEFORE the :id endpoint
+router.get('/stats', async (req, res) => {
+  try {
+    // Check if MongoDB is enabled and connected
+    if (!mongoose.connection.readyState) {
+      // MongoDB not connected, return placeholder data
+      return res.json({
+        totalCount: 0,
+        passedCount: 0,
+        failedCount: 0,
+        generationCount: 0,
+        message: 'MongoDB not connected, showing placeholder data',
+        timestamp: new Date()
+      });
+    }
+
+    // Get counts
+    const totalCount = await TestCase.countDocuments();
+    const passedCount = await TestCase.countDocuments({ result: 'Pass' });
+    const failedCount = await TestCase.countDocuments({ result: 'Fail' });
+    
+    // For generation count, use creation timestamps as an approximation
+    // This is just an estimate based on created timestamps within the last day
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    const recentCount = await TestCase.countDocuments({ 
+      createdAt: { $gte: oneDayAgo } 
+    });
+    
+    return res.json({
+      totalCount,
+      passedCount,
+      failedCount,
+      generationCount: recentCount,
+      timestamp: new Date()
+    });
+  } catch (err) {
+    console.error('Error retrieving test case statistics:', err);
+    // Return placeholder data when an error occurs
+    return res.json({
+      totalCount: 0,
+      passedCount: 0,
+      failedCount: 0,
+      generationCount: 0,
+      error: 'Error retrieving statistics',
+      timestamp: new Date()
+    });
+  }
+});
+
+// Get test case by ID - this must come AFTER more specific routes
 router.get('/:id', async (req, res) => {
   try {
     const testCase = await TestCase.findById(req.params.id);
