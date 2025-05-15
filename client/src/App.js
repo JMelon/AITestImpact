@@ -156,7 +156,7 @@ function App() {
         {/* Main Content */}
         <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeComponent === 'dashboard' && <Dashboard setActiveComponent={setActiveComponent} />}
-          {activeComponent === 'testCaseGenerator' && <TestCaseGenerator />}
+          {activeComponent === 'testCaseGenerator' && <TestCaseGenerator setActiveComponent={setActiveComponent} />}
           {activeComponent === 'qualityAssessment' && <QualityAssessment />}
           {activeComponent === 'testCodeGenerator' && <TestCodeGenerator />}
           {activeComponent === 'requirementReview' && <RequirementReview />}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import CodeBlock from './CodeBlock';
 
-const TestCaseCard = ({ testCase }) => {
+const TestCaseCard = ({ testCase, setActiveComponent }) => {
   const [expanded, setExpanded] = useState(false);
   
   // Helper function to get color class based on priority
@@ -209,13 +209,8 @@ const TestCaseCard = ({ testCase }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 localStorage.setItem('testCasesForAutomation', testCase.content);
-                const buttons = document.querySelectorAll('button');
-                const testCodeButton = Array.from(buttons).find(
-                  (button) => button.textContent.includes('Test Code Generator')
-                );
-                if (testCodeButton) {
-                  testCodeButton.click();
-                }
+                // Direct navigation to Code Generator
+                setActiveComponent('testCodeGenerator');
               }}
             >
               Generate Code

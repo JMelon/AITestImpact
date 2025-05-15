@@ -18,7 +18,7 @@ import SaveTestCasesModal from './SaveTestCasesModal';
 import CoverageReport from './CoverageReport';
 import { useToken } from '../context/TokenContext';
 
-const TestCaseGenerator = () => {
+const TestCaseGenerator = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
     acceptanceCriteria: '',
     outputType: 'Procedural',
@@ -356,15 +356,8 @@ const TestCaseGenerator = () => {
 
   const redirectToCodeGenerator = () => {
     localStorage.setItem('testCasesForAutomation', result);
-    if (typeof window !== 'undefined') {
-      const buttons = document.querySelectorAll('button');
-      const testCodeButton = Array.from(buttons).find(
-        (button) => button.textContent.includes('Test Code Generator')
-      );
-      if (testCodeButton) {
-        testCodeButton.click();
-      }
-    }
+    // Direct navigation to Code Generator
+    setActiveComponent('testCodeGenerator');
   };
 
   const analyzeRequirementsCoverage = useCallback(async () => {
@@ -869,7 +862,11 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
           {parsedTestCases.length > 0 ? (
             <div className="space-y-4">
               {parsedTestCases.map((testCase) => (
-                <TestCaseCard key={testCase.id} testCase={testCase} />
+                <TestCaseCard 
+                  key={testCase.id} 
+                  testCase={testCase} 
+                  setActiveComponent={setActiveComponent}
+                />
               ))}
             </div>
           ) : result ? (
