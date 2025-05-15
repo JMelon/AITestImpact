@@ -35,34 +35,34 @@ function App() {
       <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 text-white flex flex-col">
         {/* Header and Navigation */}
         <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
             <div className="flex justify-between items-center h-16">
-              {/* Logo and Brand - Added min-width to prevent squeezing */}
-              <div className="flex items-center min-w-[180px] mr-6" onClick={() => setActiveComponent('dashboard')} role="button">
+              {/* Logo and Brand - Reduced min-width and made more responsive */}
+              <div className="flex items-center min-w-[120px] sm:min-w-[150px] mr-2 sm:mr-4" onClick={() => setActiveComponent('dashboard')} role="button">
                 <div className="flex-shrink-0 flex items-center">
-                  <svg className="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-7 w-7 sm:h-8 sm:w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span className="ml-2 text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-600">
+                  <span className="ml-1 sm:ml-2 text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-600 truncate">
                     AITestImpact
                   </span>
                 </div>
               </div>
               
-              {/* Desktop Navigation - Added whitespace-nowrap and adjusted spacing */}
-              <nav className="hidden md:flex space-x-2 lg:space-x-4 flex-1 justify-center">
+              {/* Desktop Navigation - Improved spacing and responsiveness */}
+              <nav className="hidden md:flex space-x-1 lg:space-x-2 flex-1 justify-center overflow-x-auto">
                 {[
-                  { name: 'Dashboard', id: 'dashboard' },
-                  { name: 'Test Generator', id: 'testCaseGenerator' },
-                  { name: 'Coverage', id: 'testCoverageAnalyzer' }, // Shortened name
-                  { name: 'Code Generator', id: 'testCodeGenerator' }, // Shortened name
-                  { name: 'Req Review', id: 'requirementReview' }, // Shortened name
-                  { name: 'Test Cases', id: 'testCaseManager' },
+                  { name: 'Home', id: 'dashboard' },
+                  { name: 'Test Gen', id: 'testCaseGenerator' },
+                  { name: 'Coverage', id: 'testCoverageAnalyzer' },
+                  { name: 'Code Gen', id: 'testCodeGenerator' },
+                  { name: 'Req Review', id: 'requirementReview' },
+                  { name: 'Tests', id: 'testCaseManager' },
                   { name: 'Docs', id: 'documentation' }
                 ].map((item) => (
                   <button
                     key={item.id}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`px-2 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       activeComponent === item.id
                         ? 'bg-purple-700/30 text-purple-300 border border-purple-700/50'
                         : 'text-gray-300 hover:bg-gray-800 hover:text-white'
@@ -74,13 +74,13 @@ function App() {
                 ))}
               </nav>
               
-              {/* Desktop Search and Settings - Added flex-shrink-0 */}
-              <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-2">
-                <div className="w-48 lg:w-64">
+              {/* Desktop Search and Settings - Made more adaptive */}
+              <div className="hidden md:flex items-center space-x-2 flex-shrink-0">
+                <div className="w-36 lg:w-48 xl:w-64">
                   <SearchBar onResultClick={handleSearchResultClick} />
                 </div>
                 <button 
-                  className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                   onClick={() => alert('Settings will be implemented in the next version')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,7 +94,7 @@ function App() {
               <div className="flex md:hidden">
                 <button
                   onClick={() => setSearchVisible(!searchVisible)}
-                  className="p-2 mr-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
+                  className="p-1.5 mr-1 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
                 >
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -102,9 +102,9 @@ function App() {
                 </button>
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
+                  className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
                 >
-                  <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     {isMobileMenuOpen ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     ) : (
@@ -123,17 +123,17 @@ function App() {
             )}
           </div>
           
-          {/* Mobile Menu - Updated menu item names to match desktop */}
+          {/* Mobile Menu - Updated with shorter names */}
           {isMobileMenuOpen && (
             <div className="md:hidden bg-slate-900 border-t border-slate-800">
               <div className="px-2 pt-2 pb-3 space-y-1">
                 {[
-                  { name: 'Dashboard', id: 'dashboard' },
-                  { name: 'Test Generator', id: 'testCaseGenerator' },
+                  { name: 'Home', id: 'dashboard' },
+                  { name: 'Test Gen', id: 'testCaseGenerator' },
                   { name: 'Coverage', id: 'testCoverageAnalyzer' },
-                  { name: 'Code Generator', id: 'testCodeGenerator' },
+                  { name: 'Code Gen', id: 'testCodeGenerator' },
                   { name: 'Req Review', id: 'requirementReview' },
-                  { name: 'Test Cases', id: 'testCaseManager' },
+                  { name: 'Tests', id: 'testCaseManager' },
                   { name: 'Docs', id: 'documentation' }
                 ].map((item) => (
                   <button
