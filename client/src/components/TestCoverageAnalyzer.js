@@ -10,7 +10,7 @@ const TestCoverageAnalyzer = () => {
   const [testCases, setTestCases] = useState('');
   const [inputType, setInputType] = useState('text'); // 'text', 'image', 'swagger'
   const [swaggerUrl, setSwaggerUrl] = useState('');
-  const [imageFilesState, setImageFiles] = useState([]);
+  const [, setImageFiles] = useState([]); // Fix unused variable warning
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
