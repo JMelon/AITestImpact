@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { parseTestCases } from '../utils/testCaseParser';
 import { 
   generateProceduralMarkdown, 
   generateGherkinMarkdown, 
@@ -12,9 +11,12 @@ import {
   clearAllImages,
   removeImage
 } from '../utils/imageUtils';
+import { analyzeCoverage } from '../utils/coverageAnalyzer';
 import TestCaseCard from './TestCaseCard';
 import CodeBlock from './CodeBlock';
 import SaveTestCasesModal from './SaveTestCasesModal';
+import CoverageReport from './CoverageReport';
+import { useToken } from '../context/TokenContext';
 
 const TestCaseGenerator = () => {
   const [formData, setFormData] = useState({
@@ -29,7 +31,7 @@ const TestCaseGenerator = () => {
     refinementCount: 1
   });
   const [inputType, setInputType] = useState('text'); // 'text', 'image', or 'swagger'
-  const [imageFiles, setImageFiles] = useState([]);
+  const [imageFilesState, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [result, setResult] = useState('');
@@ -42,7 +44,11 @@ const TestCaseGenerator = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveInProgress, setSaveInProgress] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [coverageData, setCoverageData] = useState(null);
+  const [analyzingCoverage, setAnalyzingCoverage] = useState(false);
   const fileInputRef = useRef(null);
+  const tokenContext = useToken();
+  const apiToken = tokenContext ? tokenContext.apiToken : null;
 
   const { 
     acceptanceCriteria, 
@@ -342,7 +348,97 @@ const TestCaseGenerator = () => {
     }
   };
 
-  // Render the image upload section
+  const analyzeRequirementsCoverage = useCallback(async () => {
+    if (parsedTestCases.length === 0) return;
+    
+    setAnalyzingCoverage(true);
+    try {
+      let requirements = '';
+      if (inputType === 'text') {
+        requirements = acceptanceCriteria;
+      } else if (inputType === 'swagger') {
+        requirements = swaggerUrl;
+      } else if (inputType === 'image') {
+        requirements = 'Image-based requirements';
+      }
+      
+      const coverage = await analyzeCoverage({
+        testCases: parsedTestCases,
+        requirements,
+        inputType,
+        apiToken
+      });
+      
+      setCoverageData(coverage);
+    } catch (error) {
+      console.error('Error analyzing coverage:', error);
+    } finally {
+      setAnalyzingCoverage(false);
+    }
+  }, [parsedTestCases, inputType, acceptanceCriteria, swaggerUrl, apiToken]);
+
+  const generateMissingAreaTests = async () => {
+    if (!coverageData?.missingAreas?.length) return;
+    
+    setLoading(true);
+    try {
+      const missingAreasText = coverageData.missingAreas
+        .map(area => area.term || area.description)
+        .join('\n- ');
+        
+      const refinementPrompt = `
+Please generate additional test cases for these missing areas of coverage:
+- ${missingAreasText}
+
+Original requirements:
+${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for context'}
+      `;
+      
+      const response = await axios.post('http://localhost:5000/api/generate-test-cases', {
+        acceptanceCriteria: refinementPrompt,
+        outputType,
+        language
+      }, {
+        headers: apiToken ? { 'X-OpenAI-Token': apiToken } : {}
+      });
+      
+      if (response.data.choices && response.data.choices[0].message) {
+        try {
+          const content = response.data.choices[0].message.content;
+          const jsonData = typeof content === 'string' ? JSON.parse(content) : content;
+          
+          if (jsonData.testCases) {
+            const newProcessed = processStructuredTestCases(jsonData);
+            
+            setParsedTestCases(prev => [...prev, ...newProcessed]);
+            
+            const newSelected = { ...selectedTestCases };
+            newProcessed.forEach(tc => {
+              newSelected[tc.id] = true;
+            });
+            setSelectedTestCases(newSelected);
+            
+            setTimeout(() => {
+              analyzeRequirementsCoverage();
+            }, 500);
+          }
+        } catch (error) {
+          console.error('Error processing missing area test cases:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating missing area test cases:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (parsedTestCases.length > 0 && result) {
+      analyzeRequirementsCoverage();
+    }
+  }, [parsedTestCases, result, analyzeRequirementsCoverage]);
+
   const renderImageUploadSection = () => (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
@@ -717,6 +813,13 @@ const TestCaseGenerator = () => {
               >
                 Use in Code Generator
               </button>
+              <button
+                type="button"
+                onClick={analyzeRequirementsCoverage}
+                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm flex items-center gap-1 transition-colors"
+              >
+                {analyzingCoverage ? 'Analyzing...' : 'Analyze Coverage'}
+              </button>
             </div>
           )}
         </div>
@@ -788,6 +891,14 @@ const TestCaseGenerator = () => {
             </div>
           )}
         </div>
+
+        {/* Coverage Report */}
+        {coverageData && !loading && (
+          <CoverageReport 
+            coverageData={coverageData} 
+            onRequestImprovement={generateMissingAreaTests} 
+          />
+        )}
       </div>
 
       {/* Save Modal */}

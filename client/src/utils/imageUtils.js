@@ -94,9 +94,11 @@ export const removeImage = (index, setImageFiles, setImagePreviews) => {
   setImagePreviews(prevPreviews => prevPreviews.filter((_, i) => i !== index));
 };
 
-export default {
+const imageUtils = {
   processImageFiles,
   compressImage,
   clearAllImages,
   removeImage
 };
+
+export default imageUtils;
