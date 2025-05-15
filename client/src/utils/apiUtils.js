@@ -97,8 +97,11 @@ export const createApiHeaders = (apiToken, modelName) => {
   };
 };
 
-export default {
+// Fix: Assign object to a variable before exporting as module default
+const apiUtils = {
   isValidModelName,
   formatApiError,
   createApiHeaders
 };
+
+export default apiUtils;
