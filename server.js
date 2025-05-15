@@ -20,10 +20,24 @@ const enableMongoDB = process.env.ENABLE_MONGODB === 'true';
 
 if (enableMongoDB) {
   console.log('MongoDB integration enabled, attempting to connect...');
-  mongoose.connect(process.env.MONGODB_URI)
+  
+  // Configure MongoDB connection options with proper error handling
+  const mongoOptions = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
+    connectTimeoutMS: 10000, // Connection timeout after 10 seconds
+  };
+  
+  mongoose.connect(process.env.MONGODB_URI, mongoOptions)
     .then(() => console.log('MongoDB connected successfully'))
     .catch(err => {
       console.error('MongoDB connection error:', err.message);
+      if (err.name === 'MongoServerError' && err.code === 13) {
+        console.error('Authentication failed. Please check your MongoDB username and password in .env file');
+      } else if (err.name === 'MongoServerSelectionError') {
+        console.error('Could not connect to MongoDB server. Please check if MongoDB is running');
+      }
       console.log('Continuing without MongoDB functionality');
       console.log('To disable MongoDB connection attempts, set ENABLE_MONGODB=false in your .env file');
     });
@@ -34,10 +48,32 @@ if (enableMongoDB) {
 // Use test case routes if MongoDB is enabled
 if (enableMongoDB) {
   app.use('/api/test-cases', testCasesRoutes);
+} else {
+  // Add a mock implementation for when MongoDB is disabled
+  app.use('/api/test-cases', (req, res) => {
+    if (req.path === '/stats') {
+      return res.json({
+        totalCount: 0,
+        passedCount: 0,
+        failedCount: 0,
+        generationCount: 0,
+        message: 'MongoDB not connected, showing placeholder data',
+        timestamp: new Date()
+      });
+    }
+    
+    // Return empty array for GET requests to list endpoint
+    if (req.method === 'GET' && req.path === '/') {
+      return res.json([]);
+    }
+    
+    // Return 501 Not Implemented for other endpoints when MongoDB is disabled
+    res.status(501).json({ 
+      error: 'MongoDB is disabled or authentication failed. Test case management features are not available.',
+      details: 'Check MongoDB connection settings in your .env file'
+    });
+  });
 }
-
-// API routes for test cases
-app.use('/api/test-cases', require('./routes/testCases'));
 
 // API route for generating test cases
 app.post('/api/generate-test-cases', async (req, res) => {
