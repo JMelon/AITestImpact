@@ -5,7 +5,6 @@ const Dashboard = ({ setActiveComponent }) => {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white">Dashboard</h2>
-        <span className="text-xs text-gray-400">Created during Nordic Testing Days 2025 - Tutorial: Building an AI-Powered Testing Tools Platform</span>
       </div>
       
       {/* Feature Cards */}
