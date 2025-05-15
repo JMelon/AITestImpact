@@ -15,9 +15,14 @@ const Footer = () => {
           </div>
           
           <div className="flex flex-col md:flex-row items-center">
-            <p className="text-sm text-gray-400 mb-2 md:mb-0 md:mr-4">
-              Created during Nordic Testing Days 2025 - Tutorial: Building an AI-Powered Testing Tools Platform
-            </p>
+            <div className="flex flex-col w-full">
+              <p className="text-sm text-gray-400 mb-2 md:mb-0 md:mr-4">
+                Created during Nordic Testing Days 2025 - Tutorial: Building an AI-Powered Testing Tools Platform
+              </p>
+              <p className="text-sm text-gray-400 mb-2 md:mb-0 md:mr-4 text-right">
+                Built by AI - Powered by AI
+              </p>
+            </div>
             <div className="flex space-x-4">
               <a href="https://github.com/yourusername/your-repo" className="text-gray-400 hover:text-white" target="_blank" rel="noopener noreferrer">
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
