@@ -3,6 +3,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useToken } from '../context/TokenContext'; // Import useToken hook
 
 // Custom renderer for code blocks in Markdown
 const CodeBlock = ({ node, inline, className, children, ...props }) => {
@@ -33,6 +34,8 @@ const QualityAssessment = () => {
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [selectedPractices, setSelectedPractices] = useState([]);
+
+  const { apiToken, modelName } = useToken(); // Get both API token and model name
 
   const allPractices = [
     "Unit tests", "Integration tests", "Contract tests", "End-to-end tests", 
@@ -152,17 +155,32 @@ const QualityAssessment = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const generateAssessment = async () => {
     setLoading(true);
     setError('');
     setResult('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/generate-quality-assessment', {
-        selectedPractices
-      });
-      setResult(res.data.choices[0].message.content);
+      if (selectedPractices.length === 0) {
+        throw new Error('Please select at least one quality practice');
+      }
+
+      if (!apiToken) {
+        throw new Error('OpenAI API key is required. Please configure it in the settings page.');
+      }
+
+      const response = await axios.post(
+        'http://localhost:5000/api/generate-quality-assessment',
+        { selectedPractices },
+        {
+          headers: {
+            'X-OpenAI-Token': apiToken,
+            'X-OpenAI-Model': modelName // Add model name to headers
+          }
+        }
+      );
+
+      setResult(response.data.choices[0].message.content);
     } catch (err) {
       setError(
         err.response?.data?.details || 
@@ -203,7 +221,7 @@ const QualityAssessment = () => {
         </div>
         
         {/* Categories section */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { e.preventDefault(); generateAssessment(); }}>
           <div className="overflow-auto max-h-[40vh]">
             {Object.entries(categories).map(([category, practices]) => (
               <div key={category} className="mb-4 bg-gray-800/50 border border-gray-700 rounded-lg p-4">

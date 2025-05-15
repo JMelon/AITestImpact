@@ -8,6 +8,48 @@ const testCasesRoutes = require('./routes/testCases');
 
 const app = express();
 
+const DEFAULT_MODEL = 'gpt-4.1-2025-04-14';
+
+// Helper function to handle OpenAI API errors
+const handleOpenAIError = (error) => {
+  // Check if it's a model not found error
+  if (error.response?.data?.error?.code === 'model_not_found') {
+    return {
+      status: 400,
+      error: 'Invalid AI model specified',
+      details: `The model "${error.response.data.error.message.split("'")[1] || 'specified'}" does not exist or you don't have access to it. Please check your settings and try a different model like "${DEFAULT_MODEL}".`,
+      code: 'model_not_found'
+    };
+  }
+  
+  // Other common OpenAI API errors
+  if (error.response?.data?.error?.type === 'invalid_request_error') {
+    return {
+      status: 400,
+      error: 'Invalid request to AI service',
+      details: error.response.data.error.message,
+      code: error.response.data.error.code
+    };
+  }
+  
+  if (error.response?.status === 429) {
+    return {
+      status: 429,
+      error: 'Rate limit exceeded',
+      details: 'You have exceeded the rate limit for the AI service. Please try again later.',
+      code: 'rate_limit_exceeded'
+    };
+  }
+  
+  // Default error handling
+  return {
+    status: error.response?.status || 500,
+    error: 'Error calling AI service',
+    details: error.response?.data?.error?.message || error.message,
+    code: error.response?.data?.error?.code || 'unknown_error'
+  };
+};
+
 // Middleware
 app.use(cors());
 
@@ -95,8 +137,9 @@ app.post('/api/generate-test-cases', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token from request header
+    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -328,8 +371,9 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
     }
 
     console.log('Sending request to OpenAI API...');
+    console.log('Using model:', modelName);
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
+      model: modelName,
       messages: messages,
       response_format: { type: "json_object" }, // Request JSON format explicitly
       temperature: 0.7,
@@ -373,7 +417,7 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
             
             // Make a follow-up request to fix the numbering
             const fixResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-              model: 'gpt-4.1-2025-04-14',
+              model: modelName, // Use the same model here
               messages: [
                 {
                   role: 'system',
@@ -409,10 +453,8 @@ Return only the fixed JSON object with no additional text.`
     return res.json(responseData);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error generating test cases', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
@@ -431,8 +473,9 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       return res.status(400).json({ error: 'Test cases are required' });
     }
 
-    // API token can come from request header only
+    // API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -529,9 +572,9 @@ The analysis should be structured with clear sections and specific examples.
         }
       }));
       
-      // For image input, we'll use the GPT-4 Vision API
+      // For image input, use the model from header
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-4-vision-preview',
+        model: modelName, // Use the model from the header
         messages: [
           {
             role: 'system',
@@ -594,7 +637,7 @@ The analysis should be structured with clear sections and specific examples.
     ];
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-1106-preview',
+      model: modelName, // Use the model from the header
       messages: messages,
       response_format: { type: "json_object" },
       temperature: 0.7,
@@ -635,10 +678,8 @@ The analysis should be structured with clear sections and specific examples.
     }
   } catch (error) {
     console.error('Error analyzing test coverage:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error analyzing test coverage', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
@@ -718,8 +759,9 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token from request header
+    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -731,7 +773,7 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
     const unselectedPractices = getUnselectedPractices(selectedPractices);
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
+      model: modelName, // Use the model from the header
       messages: [
         {
           role: 'system',
@@ -752,10 +794,8 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
     return res.json(response.data);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error generating quality assessment', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
@@ -768,8 +808,9 @@ app.post('/api/generate-test-code', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token from request header
+    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -779,7 +820,7 @@ app.post('/api/generate-test-code', async (req, res) => {
     }
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
+      model: modelName, // Use the model from the header
       messages: [
         {
           role: 'system',
@@ -800,10 +841,8 @@ app.post('/api/generate-test-code', async (req, res) => {
     return res.json(response.data);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error generating test automation code', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
@@ -816,8 +855,9 @@ app.post('/api/refine-test-cases', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token from request header
+    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -849,7 +889,7 @@ app.post('/api/refine-test-cases', async (req, res) => {
 
     console.log('Sending request to OpenAI API for test case refinement...');
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
+      model: modelName, // Use the model from the header
       messages: messages,
       response_format: { type: "json_object" }, // Request JSON format explicitly
       temperature: 0.7,
@@ -865,10 +905,8 @@ app.post('/api/refine-test-cases', async (req, res) => {
     return res.json(response.data);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error refining test cases', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
@@ -881,8 +919,9 @@ app.post('/api/review-requirements', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token from request header
+    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -918,7 +957,7 @@ Provide a structured analysis with clear categories of findings, specific refere
     ];
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-2025-04-14',
+      model: modelName, // Use the model from the header
       messages: messages
     }, {
       headers: {
@@ -930,10 +969,8 @@ Provide a structured analysis with clear categories of findings, specific refere
     return res.json(response.data);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: 'Error analyzing requirements', 
-      details: error.response?.data || error.message 
-    });
+    const errorResponse = handleOpenAIError(error);
+    return res.status(errorResponse.status).json(errorResponse);
   }
 });
 

@@ -35,26 +35,32 @@ const RequirementReview = ({ setActiveComponent }) => {
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { apiToken } = useToken();
+  const { apiToken, modelName } = useToken(); // Get both API token and model name
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     setResult('');
+    setError('');
 
     try {
-      if (!apiToken) {
-        throw new Error('OpenAI API key is required. Please configure it in the settings.');
+      if (!requirements.trim()) {
+        throw new Error('Please enter requirements to review');
       }
 
-      const response = await axios.post('http://localhost:5000/api/review-requirements', {
-        requirements
-      }, {
-        headers: {
-          'x-openai-token': apiToken
+      if (!apiToken) {
+        throw new Error('OpenAI API key is required. Please configure it in the settings page.');
+      }
+
+      const response = await axios.post('http://localhost:5000/api/review-requirements', 
+        { requirements },
+        { 
+          headers: { 
+            'X-OpenAI-Token': apiToken,
+            'X-OpenAI-Model': modelName // Add model name to headers
+          }
         }
-      });
+      );
       setResult(response.data.choices[0].message.content);
     } catch (err) {
       setError(

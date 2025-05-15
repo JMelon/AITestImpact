@@ -16,7 +16,7 @@ const TestCodeGenerator = ({ setActiveComponent }) => {
   const [copied, setCopied] = useState(false);
 
   const { testCase, framework } = formData;
-  const { apiToken } = useToken();
+  const { apiToken, modelName } = useToken(); // Get both API token and model name
 
   const frameworks = [
     "Selenium WebDriver (Java)",
@@ -67,7 +67,8 @@ const TestCodeGenerator = ({ setActiveComponent }) => {
         framework
       }, {
         headers: {
-          'x-openai-token': apiToken
+          'x-openai-token': apiToken,
+          'X-OpenAI-Model': modelName // Add model name to headers
         }
       });
 

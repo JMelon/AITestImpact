@@ -12,12 +12,14 @@ import {
   removeImage
 } from '../utils/imageUtils';
 import { analyzeCoverage } from '../utils/coverageAnalyzer';
+import { formatApiError, createApiHeaders } from '../utils/apiUtils';
 import TestCaseCard from './TestCaseCard';
 import CodeBlock from './CodeBlock';
 import SaveTestCasesModal from './SaveTestCasesModal';
 import CoverageReport from './CoverageReport';
 import { useToken } from '../context/TokenContext';
 import ApiKeyCheck from './common/ApiKeyCheck';
+import ModelErrorNotice from './common/ModelErrorNotice';
 
 const TestCaseGenerator = ({ setActiveComponent }) => {
   const [formData, setFormData] = useState({
@@ -38,6 +40,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState(null);
   const [currentRefinement, setCurrentRefinement] = useState(0);
   const [originalResult, setOriginalResult] = useState('');
   const [parsedTestCases, setParsedTestCases] = useState([]);
@@ -50,6 +53,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
   const fileInputRef = useRef(null);
   const tokenContext = useToken();
   const apiToken = tokenContext ? tokenContext.apiToken : null;
+  const modelName = tokenContext ? tokenContext.modelName : 'gpt-4.1-2025-04-14';
 
   const { 
     acceptanceCriteria, 
@@ -70,6 +74,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
   const handleInputTypeChange = (type) => {
     setInputType(type);
     setError('');
+    setErrorDetails(null);
   };
 
   const handleImageChange = (e) => {
@@ -137,6 +142,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setErrorDetails(null);
     setResult('');
     setCurrentRefinement(0);
     setOriginalResult('');
@@ -163,10 +169,8 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
         requestData.swaggerUrl = ''; 
       }
 
-      // Add headers with API token
-      const headers = {
-        'x-openai-token': apiToken
-      };
+      // Create API headers using utility function
+      const headers = createApiHeaders(apiToken, modelName);
 
       const initialResponse = await axios.post('http://localhost:5000/api/generate-test-cases', requestData, { headers });
       
@@ -261,12 +265,12 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
         }
       }
     } catch (err) {
-      setError(
-        err.response?.data?.details || 
-        err.response?.data?.error || 
-        'Failed to generate test cases. Please try again.'
-      );
       console.error('Error:', err);
+      
+      // Format error using utility function
+      const formattedError = formatApiError(err);
+      setError(formattedError.message);
+      setErrorDetails(formattedError);
     } finally {
       setLoading(false);
     }
@@ -406,7 +410,8 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
         testCases: parsedTestCases,
         requirements,
         inputType,
-        apiToken
+        apiToken,
+        modelName // Pass the model name
       });
       
       setCoverageData(coverage);
@@ -415,7 +420,7 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
     } finally {
       setAnalyzingCoverage(false);
     }
-  }, [parsedTestCases, inputType, acceptanceCriteria, swaggerUrl, apiToken]);
+  }, [parsedTestCases, inputType, acceptanceCriteria, swaggerUrl, apiToken, modelName]); // Add modelName to dependency array
 
   const generateMissingAreaTests = async () => {
     if (!coverageData?.missingAreas?.length) return;
@@ -439,7 +444,10 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
         outputType,
         language
       }, {
-        headers: apiToken ? { 'X-OpenAI-Token': apiToken } : {}
+        headers: {
+          'X-OpenAI-Token': apiToken,
+          'X-OpenAI-Model': modelName // Add model name
+        }
       });
       
       if (response.data.choices && response.data.choices[0].message) {
@@ -478,6 +486,15 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
       analyzeRequirementsCoverage();
     }
   }, [parsedTestCases, result, analyzeRequirementsCoverage]);
+
+  const handleRetry = () => {
+    // Clear error states
+    setError('');
+    setErrorDetails(null);
+    
+    // Try submission again with current form data
+    onSubmit(new Event('submit'));
+  };
 
   const renderImageUploadSection = () => (
     <div className="mb-6">
@@ -559,7 +576,7 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
         ) : (
           <div className="py-8">
             <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 002-2V6a2 2 002-2H6a2 2 00-2 2v12a2 2 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 012.828 0L20 14m-6-6h.01M6 20h12a2 2 002-2V6a2 2 002-2H6a2 2 00-2 2v12a2 2 002 2z" />
             </svg>
             <p className="mt-2 text-sm text-gray-400">Drag and drop images here, or click to select multiple</p>
             <p className="mt-1 text-xs text-gray-500">(Max total size: 16MB)</p>
@@ -883,9 +900,17 @@ ${inputType === 'text' ? acceptanceCriteria : 'See existing test cases for conte
           </div>
         )}
         {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-lg mb-4">
-            {error}
-          </div>
+          errorDetails ? (
+            <ModelErrorNotice 
+              error={errorDetails} 
+              onRetry={handleRetry}
+              onGoToSettings={() => setActiveComponent('settings')}
+            />
+          ) : (
+            <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-lg mb-4">
+              {error}
+            </div>
+          )
         )}
         
         <div className="max-h-[50vh] overflow-auto">

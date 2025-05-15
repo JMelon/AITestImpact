@@ -20,6 +20,7 @@ const TestCoverageAnalyzer = ({ setActiveComponent }) => {
   const fileInputRef = useRef(null);
   const tokenContext = useToken();
   const apiToken = tokenContext ? tokenContext.apiToken : null;
+  const modelName = tokenContext ? tokenContext.modelName : 'gpt-4.1-2025-04-14';
 
   const handleInputTypeChange = (type) => {
     setInputType(type);
@@ -102,6 +103,7 @@ const TestCoverageAnalyzer = ({ setActiveComponent }) => {
       const headers = {};
       if (apiToken) {
         headers['X-OpenAI-Token'] = apiToken;
+        headers['X-OpenAI-Model'] = modelName; // Add model name to headers
       }
 
       const response = await axios.post('http://localhost:5000/api/analyze-test-coverage', requestData, { headers });

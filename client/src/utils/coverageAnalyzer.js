@@ -7,9 +7,10 @@ import axios from 'axios';
  * @param {string} params.requirements - Original requirements (acceptance criteria/etc.)
  * @param {string} params.inputType - Type of input ('text', 'image', 'swagger')
  * @param {string} [params.apiToken] - OpenAI API token for analysis
+ * @param {string} [params.modelName] - OpenAI model name to use
  * @returns {Promise<Object>} Coverage analysis results
  */
-export const analyzeCoverage = async ({ testCases, requirements, inputType, apiToken }) => {
+export const analyzeCoverage = async ({ testCases, requirements, inputType, apiToken, modelName }) => {
   try {
     // For local analysis (without AI):
     if (!apiToken || testCases.length === 0) {
@@ -26,7 +27,8 @@ export const analyzeCoverage = async ({ testCases, requirements, inputType, apiT
       inputType
     }, {
       headers: {
-        'X-OpenAI-Token': apiToken
+        'X-OpenAI-Token': apiToken,
+        'X-OpenAI-Model': modelName || 'gpt-4.1-2025-04-14' // Add model name with default
       }
     });
     
