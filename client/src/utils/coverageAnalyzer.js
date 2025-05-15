@@ -17,11 +17,11 @@ export const analyzeCoverage = async ({ testCases, requirements, inputType, apiT
     }
     
     // For AI-powered detailed analysis:
-    const response = await axios.post('http://localhost:5000/api/analyze-coverage', {
-      testCases: testCases.map(tc => ({
-        title: tc.title,
-        content: tc.content
-      })),
+    // Format test cases content for API consumption
+    const formattedTestCases = testCases.map(tc => tc.content).join('\n\n');
+    
+    const response = await axios.post('http://localhost:5000/api/analyze-test-coverage', {
+      testCases: formattedTestCases,
       requirements,
       inputType
     }, {
