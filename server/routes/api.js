@@ -18,12 +18,12 @@ router.post('/analyze-coverage', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are a test coverage analyzer assistant. Your task is to analyze if test cases provide adequate coverage for the given requirements."
+          content: "You are a test coverage analyzer assistant. Your task is to analyze if test cases provide adequate coverage for the given requirements. You must return your analysis as a JSON object."
         },
         {
           role: "user",
           content: `
-Please analyze the test coverage for the following requirements:
+Please analyze the test coverage for the following requirements and return the results as a JSON object:
 
 REQUIREMENTS:
 ${requirements}
@@ -31,13 +31,7 @@ ${requirements}
 TEST CASES:
 ${JSON.stringify(testCases, null, 2)}
 
-Provide a JSON response with:
-1. coverageScore (0-100)
-2. missingAreas (array of areas not covered)
-3. coverageDetails (details of what is covered)
-4. suggestions for additional test cases
-
-Format:
+Provide your analysis in this JSON format:
 {
   "coverageScore": <number>,
   "missingAreas": [{"description": "<description>", "importance": "high|medium|low"}],

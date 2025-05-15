@@ -6,6 +6,7 @@ import TestCodeGenerator from './components/TestCodeGenerator';
 import Navigation from './components/Navigation';
 import RequirementReview from './components/RequirementReview';
 import TestCaseManager from './components/TestCaseManager';
+import TestCoverageAnalyzer from './components/TestCoverageAnalyzer';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('testCaseGenerator');
@@ -67,6 +68,16 @@ function App() {
             >
               Test Case Manager
             </button>
+            <button
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                activeComponent === 'testCoverageAnalyzer'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+              onClick={() => setActiveComponent('testCoverageAnalyzer')}
+            >
+              Coverage Analyzer
+            </button>
           </div>
         </nav>
       </header>
@@ -77,6 +88,7 @@ function App() {
         {activeComponent === 'testCodeGenerator' && <TestCodeGenerator />}
         {activeComponent === 'requirementReview' && <RequirementReview />}
         {activeComponent === 'testCaseManager' && <TestCaseManager />}
+        {activeComponent === 'testCoverageAnalyzer' && <TestCoverageAnalyzer />}
       </main>
 
       <footer className="text-center text-gray-400 mt-10 pt-6 border-t border-gray-800">

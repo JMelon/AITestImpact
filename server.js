@@ -323,6 +323,292 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
   }
 });
 
+// API route for analyzing test coverage
+app.post('/api/analyze-test-coverage', async (req, res) => {
+  try {
+    const { 
+      testCases, 
+      requirements, 
+      inputType, 
+      swaggerUrl, 
+      imageDataArray 
+    } = req.body;
+    
+    if (!testCases) {
+      return res.status(400).json({ error: 'Test cases are required' });
+    }
+
+    // API token can come from request header or environment
+    const apiToken = req.headers['x-openai-token'] || process.env.OPENAI_API_KEY;
+
+    // Format prompt based on input type
+    let prompt = '';
+    
+    if (inputType === 'text') {
+      if (!requirements) {
+        return res.status(400).json({ error: 'Requirements are required for text input type' });
+      }
+      
+      prompt = `
+Please analyze if these test cases provide complete coverage for the given requirements and return your analysis as a JSON object.
+
+REQUIREMENTS:
+${requirements}
+
+TEST CASES:
+${testCases}
+
+Perform a detailed gap analysis to identify any areas of the requirements that are not adequately covered by the test cases. 
+Provide a comprehensive evaluation of:
+1. Overall coverage percentage (0-100%)
+2. Specific requirements that are well-covered
+3. Specific requirements that are partially covered or missing coverage
+4. Recommendations for additional test cases to improve coverage
+
+Return your analysis as a JSON object with the following structure:
+{
+  "coverageScore": number,
+  "missingAreas": [{"description": string, "importance": "high"|"medium"|"low"}],
+  "coverageDetails": [{"area": string, "covered": boolean, "testCases": string[]}],
+  "suggestions": string[],
+  "analysis": string
+}
+
+The analysis should be structured with clear sections and specific examples.
+`;
+    } else if (inputType === 'swagger') {
+      if (!swaggerUrl) {
+        return res.status(400).json({ error: 'Swagger URL is required for swagger input type' });
+      }
+      
+      // Fetch the Swagger spec
+      let swaggerSpec;
+      try {
+        const swaggerResponse = await axios.get(swaggerUrl);
+        swaggerSpec = JSON.stringify(swaggerResponse.data);
+      } catch (error) {
+        return res.status(400).json({ error: 'Failed to fetch Swagger spec from provided URL' });
+      }
+      
+      prompt = `
+Please analyze if these test cases provide complete coverage for the API defined in this Swagger/OpenAPI specification and return your analysis as a JSON object.
+
+SWAGGER/OPENAPI SPEC:
+${swaggerSpec}
+
+TEST CASES:
+${testCases}
+
+Perform a detailed gap analysis to identify any endpoints, status codes, or request/response scenarios that are not adequately covered by the test cases. Focus on:
+1. Overall API coverage percentage (0-100%)
+2. Endpoints and operations that are well-covered
+3. Endpoints and operations that are partially covered or missing coverage
+4. Common API testing scenarios that should be added (authentication, error handling, edge cases)
+5. Recommendations for additional test cases to improve coverage
+
+Return your analysis as a JSON object with the following structure:
+{
+  "coverageScore": number,
+  "missingAreas": [{"description": string, "importance": "high"|"medium"|"low"}],
+  "coverageDetails": [{"area": string, "covered": boolean, "testCases": string[]}],
+  "suggestions": string[],
+  "analysis": string
+}
+
+The analysis should be structured with clear sections and specific examples.
+`;
+    } else if (inputType === 'image') {
+      if (!imageDataArray || imageDataArray.length === 0) {
+        return res.status(400).json({ error: 'Image data is required for image input type' });
+      }
+      
+      const imageContentItems = imageDataArray.map((img, index) => ({
+        type: 'image_url',
+        image_url: {
+          url: img,
+        }
+      }));
+      
+      // For image input, we'll use the GPT-4 Vision API
+      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-4-vision-preview',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a test coverage analyzer that examines if test cases adequately cover the requirements shown in images. Provide comprehensive analysis with coverage percentage and recommendations.'
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Please analyze if these test cases provide complete coverage for the requirements shown in the attached image(s). The test cases are:\n\n${testCases}\n\nPerform a detailed gap analysis and provide a comprehensive evaluation with coverage percentage, well-covered areas, missing coverage, and recommendations for additional test cases.`
+              },
+              ...imageContentItems
+            ]
+          }
+        ],
+        max_tokens: 4000,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Process and format the response
+      try {
+        const content = response.data.choices[0].message.content;
+        
+        // Parse the content to create a structured analysis
+        const analysisResult = {
+          analysis: content,
+          // Extract coverage percentage using regex
+          coverageScore: extractCoverageScore(content),
+          // Extract missing areas
+          missingAreas: extractMissingAreas(content),
+          // Extract suggestions
+          suggestions: extractSuggestions(content)
+        };
+        
+        return res.json(analysisResult);
+      } catch (error) {
+        console.error('Error processing image analysis response:', error);
+        return res.status(500).json({
+          error: 'Error processing analysis response',
+          details: error.message
+        });
+      }
+    }
+
+    // For text and Swagger, use JSON response format
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are a test coverage analyzer that examines if test cases adequately cover requirements or API specifications. Provide a structured analysis with numerical metrics and actionable recommendations. Your response should be formatted as a JSON object.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ];
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4-1106-preview',
+      messages: messages,
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 4000,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Extract the JSON content
+    try {
+      const content = response.data.choices[0].message.content;
+      const jsonData = JSON.parse(content);
+      
+      // Ensure the response has the expected structure
+      const formattedResponse = {
+        coverageScore: jsonData.coverageScore || jsonData.coverage || 0,
+        missingAreas: jsonData.missingAreas || jsonData.gaps || [],
+        coverageDetails: jsonData.coverageDetails || jsonData.coveredAreas || [],
+        suggestions: jsonData.suggestions || jsonData.recommendations || [],
+        analysis: jsonData.analysis || jsonData.detailedAnalysis || ''
+      };
+      
+      return res.json(formattedResponse);
+    } catch (error) {
+      console.error('Error parsing JSON response:', error);
+      
+      // If JSON parsing fails, return the raw content with best-effort extraction
+      const content = response.data.choices[0].message.content;
+      return res.json({
+        analysis: content,
+        coverageScore: extractCoverageScore(content),
+        missingAreas: extractMissingAreas(content),
+        suggestions: extractSuggestions(content)
+      });
+    }
+  } catch (error) {
+    console.error('Error analyzing test coverage:', error.response?.data || error.message);
+    return res.status(500).json({ 
+      error: 'Error analyzing test coverage', 
+      details: error.response?.data || error.message 
+    });
+  }
+});
+
+// Helper functions for extracting data from text responses
+function extractCoverageScore(text) {
+  // Try to find percentage patterns like "75%" or "coverage: 80"
+  const percentageMatch = text.match(/(\d{1,3})%/);
+  if (percentageMatch) return parseInt(percentageMatch[1]);
+  
+  const coverageMatch = text.match(/coverage[:\s]+(\d{1,3})/i);
+  if (coverageMatch) return parseInt(coverageMatch[1]);
+  
+  return null;
+}
+
+function extractMissingAreas(text) {
+  const missingAreas = [];
+  
+  // Look for sections that might indicate missing coverage
+  const sections = text.split(/#+\s+/);
+  
+  for (const section of sections) {
+    if (/missing|gap|not covered|lacking/i.test(section)) {
+      // Extract bullet points
+      const bullets = section.split(/\n-\s+/).slice(1);
+      bullets.forEach(bullet => {
+        if (bullet.trim()) {
+          missingAreas.push({
+            description: bullet.trim(),
+            importance: determinImportance(bullet)
+          });
+        }
+      });
+    }
+  }
+  
+  return missingAreas;
+}
+
+function determinImportance(text) {
+  if (/critical|severe|high priority|crucial|essential/i.test(text)) {
+    return 'high';
+  } else if (/moderate|medium|important/i.test(text)) {
+    return 'medium';
+  } else {
+    return 'low';
+  }
+}
+
+function extractSuggestions(text) {
+  const suggestions = [];
+  
+  // Look for recommendation sections
+  const sections = text.split(/#+\s+/);
+  
+  for (const section of sections) {
+    if (/recommend|suggestion|improve|enhance/i.test(section)) {
+      // Extract bullet points
+      const bullets = section.split(/\n-\s+/).slice(1);
+      bullets.forEach(bullet => {
+        if (bullet.trim()) {
+          suggestions.push(bullet.trim());
+        }
+      });
+    }
+  }
+  
+  return suggestions;
+}
+
 // API route for quality assessment
 app.post('/api/generate-quality-assessment', async (req, res) => {
   try {
