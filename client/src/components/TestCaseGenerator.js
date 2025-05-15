@@ -114,6 +114,24 @@ const TestCaseGenerator = () => {
     removeImage(index, setImageFiles, setImagePreviews);
   };
 
+  // Add this function to ensure unique IDs in the parsed test cases
+  const ensureUniqueTestCaseIds = (testCases) => {
+    const usedIds = new Set();
+    
+    return testCases.map((tc, index) => {
+      if (!tc.id || usedIds.has(tc.id)) {
+        // Generate a new unique ID based on the original ID pattern and index
+        const baseId = tc.id ? tc.id.replace(/\d+$/, '') : 'TC-GEN-';
+        const newId = `${baseId}${String(index + 1).padStart(3, '0')}`;
+        
+        return { ...tc, id: newId };
+      }
+      
+      usedIds.add(tc.id);
+      return tc;
+    });
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -178,10 +196,11 @@ const TestCaseGenerator = () => {
             responseContent = formattedTestCases;
             
             const processed = processStructuredTestCases(jsonData);
-            setParsedTestCases(processed);
+            const uniqueProcessed = ensureUniqueTestCaseIds(processed);
+            setParsedTestCases(uniqueProcessed);
             
             const selected = {};
-            processed.forEach(tc => {
+            uniqueProcessed.forEach(tc => {
               selected[tc.id] = true;
             });
             setSelectedTestCases(selected);

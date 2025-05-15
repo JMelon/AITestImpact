@@ -206,7 +206,7 @@ Instead of returning test cases as plain text, you MUST return a structured JSON
     // For Procedural Test Cases
     {
       "format": "Procedural",
-      "testId": "TC-XXX-001",
+      "testId": "TC-XXX-001",  // IMPORTANT: Each test case MUST have a unique ID with sequential numbering (001, 002, 003, etc.)
       "title": "Test case title",
       "objective": "What the test is verifying",
       "preconditions": [
@@ -264,6 +264,8 @@ Instead of returning test cases as plain text, you MUST return a structured JSON
   }
 }
 
+IMPORTANT: Ensure each test case has a unique testId. For procedural test cases, use the format 'TC-XXX-001', 'TC-XXX-002', etc., with sequential numbering. Never reuse the same number for multiple test cases.
+
 You MUST return ONLY the JSON object, with no additional text before or after. The JSON must be properly formatted and valid.`;
 
     // Replace the original system prompt with our structured JSON prompt
@@ -295,25 +297,67 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
     console.log('OpenAI API Response Status:', response.status);
     console.log('OpenAI Response Headers:', response.headers);
     
-    if (response.data && response.data.choices && response.data.choices.length > 0) {
-      const content = response.data.choices[0].message.content;
-      console.log('Response Length:', content.length);
-      console.log('Response Preview:', content.substring(0, 500) + '...');
-      
+    // Process and return the structured response
+    let responseData = response.data;
+    
+    // Check for duplicate testIds and fix them if needed
+    if (responseData.choices && responseData.choices[0] && responseData.choices[0].message) {
       try {
-        // Log if it's valid JSON
-        const parsed = JSON.parse(content);
-        console.log('Response is valid JSON with keys:', Object.keys(parsed));
-        if (parsed.testCases) {
-          console.log(`Contains ${parsed.testCases.length} test cases`);
+        let content = responseData.choices[0].message.content;
+        let jsonData = typeof content === 'string' ? JSON.parse(content) : content;
+        
+        if (jsonData.testCases && Array.isArray(jsonData.testCases)) {
+          // Fix duplicate IDs if they exist
+          const usedIds = new Set();
+          let needsRetry = false;
+          
+          jsonData.testCases.forEach((tc, index) => {
+            if (tc.testId && usedIds.has(tc.testId)) {
+              console.log(`Duplicate test ID detected: ${tc.testId}`);
+              needsRetry = true;
+            }
+            usedIds.add(tc.testId);
+          });
+          
+          if (needsRetry) {
+            console.log("Detected duplicate test case IDs. Requesting a fix from OpenAI...");
+            
+            // Make a follow-up request to fix the numbering
+            const fixResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+              model: 'gpt-4.1-2025-04-14',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are tasked with fixing the numbering of test cases. Each test case must have a unique testId.'
+                },
+                {
+                  role: 'user',
+                  content: `The following JSON contains test cases with duplicate IDs. Please fix the numbering to ensure each test case has a unique sequential ID (001, 002, 003, etc.):
+                  
+${JSON.stringify(jsonData, null, 2)}
+
+Return only the fixed JSON object with no additional text.`
+                }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.7,
+            }, {
+              headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            // Replace the original response data with the fixed data
+            responseData = fixResponse.data;
+          }
         }
-      } catch (e) {
-        console.log('Response is not valid JSON');
+      } catch (err) {
+        console.error("Error processing or fixing test case IDs:", err);
       }
     }
-
-    // Process and return the structured response
-    return res.json(response.data);
+    
+    return res.json(responseData);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
     return res.status(500).json({ 

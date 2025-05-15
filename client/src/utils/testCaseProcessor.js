@@ -34,10 +34,22 @@ export const processStructuredTestCases = (response) => {
     const processedTestCases = [];
     
     if (testCasesData.testCases && Array.isArray(testCasesData.testCases)) {
+      // Keep track of used IDs to ensure uniqueness
+      const usedIds = new Set();
+      let idCounter = 1;
+      
       testCasesData.testCases.forEach((tc, index) => {
         // Generate markdown content based on the structure
         let markdownContent = '';
         let id = tc.testId || `TC-${index + 1}`;
+        
+        // Ensure ID is unique
+        while (usedIds.has(id)) {
+          // If duplicate, create a new ID by incrementing a counter
+          const idBase = id.replace(/\d+$/, '');
+          id = `${idBase}${String(idCounter++).padStart(3, '0')}`;
+        }
+        usedIds.add(id);
         
         if (tc.format === 'Procedural') {
           markdownContent = generateProceduralMarkdown(tc);
