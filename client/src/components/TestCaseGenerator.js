@@ -198,6 +198,23 @@ const TestCaseGenerator = ({ setActiveComponent }) => {
           const jsonData = typeof content === 'string' ? JSON.parse(content) : content;
           
           if (jsonData.testCases) {
+            // Validate and fix the configuration values in test cases
+            if (Array.isArray(jsonData.testCases)) {
+              jsonData.testCases = jsonData.testCases.map(tc => {
+                // Ensure each test case has the correct configuration
+                return {
+                  ...tc,
+                  priority: tc.priority || priority,
+                  severity: tc.severity || severity,
+                  tags: Array.isArray(tc.tags) 
+                    ? tc.tags.includes(testType) && tc.tags.includes(extendedOptions)
+                      ? tc.tags 
+                      : [...new Set([...tc.tags, testType, extendedOptions])]
+                    : [testType, extendedOptions]
+                };
+              });
+            }
+
             const formattedTestCases = jsonData.testCases.map(tc => {
               return tc.format === 'Procedural' 
                 ? generateProceduralMarkdown(tc) 

@@ -57,6 +57,12 @@ export const processStructuredTestCases = (response) => {
           markdownContent = generateGherkinMarkdown(tc);
         }
         
+        // Ensure the test case includes the priority, severity and tags
+        const priority = tc.priority || 'P2-Medium';
+        const severity = tc.severity || 'Major';
+        const category = tc.category || 'Other';
+        const tags = Array.isArray(tc.tags) ? tc.tags : [];
+        
         // Create a processed test case object
         processedTestCases.push({
           id,
@@ -64,10 +70,10 @@ export const processStructuredTestCases = (response) => {
           content: markdownContent,
           structuredData: tc,
           format: tc.format,
-          priority: tc.priority,
-          severity: tc.severity,
-          category: tc.category,
-          tags: tc.tags || []
+          priority,
+          severity,
+          category,
+          tags
         });
       });
     }

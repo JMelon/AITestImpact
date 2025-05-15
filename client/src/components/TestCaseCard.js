@@ -51,12 +51,7 @@ const TestCaseCard = ({ testCase, setActiveComponent }) => {
           </div>
         </div>
         
-        {testCase.structuredData && testCase.format === 'Procedural' && (
-          <div className="mt-2 text-sm text-gray-300">
-            <p>{testCase.structuredData.objective}</p>
-          </div>
-        )}
-        
+        {/* Display test type and coverage prominently */}
         {testCase.tags && testCase.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {testCase.tags.map((tag, idx) => (
@@ -64,6 +59,12 @@ const TestCaseCard = ({ testCase, setActiveComponent }) => {
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+        
+        {testCase.structuredData && testCase.format === 'Procedural' && (
+          <div className="mt-2 text-sm text-gray-300">
+            <p>{testCase.structuredData.objective}</p>
           </div>
         )}
         

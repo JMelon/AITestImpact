@@ -116,7 +116,13 @@ Testing Configuration:
 - Test Type: ${testType || 'Functional'}
 - Test Coverage: ${extendedOptions || 'Happy paths'}
 
-When generating test cases, please consider the priority, severity, test type, and test coverage specified above. Focus on creating tests that align with these parameters.`;
+IMPORTANT: You MUST follow these configuration parameters for ALL generated test cases. Each test case must:
+1. Reflect the specified Priority level (${priority || 'P2-Medium'})
+2. Match the indicated Severity (${severity || 'Major'})
+3. Focus on the Test Type specified (${testType || 'Functional'})
+4. Cover scenarios appropriate for the Test Coverage type (${extendedOptions || 'Happy paths'})
+
+The generated test cases will be evaluated based on how well they adhere to these parameters.`;
 
     // Add Gherkin-specific instructions if outputType is Gherkin
     if (outputType === 'Gherkin') {
@@ -268,10 +274,10 @@ Instead of returning test cases as plain text, you MUST return a structured JSON
         "Postcondition 1",
         "Postcondition 2"
       ],
-      "priority": "${priority || 'P2-Medium'}",
-      "severity": "${severity || 'Major'}",
-      "category": "${swaggerUrl ? 'API' : imageData ? 'UI' : 'Other'}",
-      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"]
+      "priority": "${priority || 'P2-Medium'}", // MUST match user-specified priority
+      "severity": "${severity || 'Major'}", // MUST match user-specified severity
+      "category": "${swaggerUrl ? 'API' : imageData || imageDataArray ? 'UI' : 'Other'}",
+      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"] // MUST include specified test type and coverage
     },
     // For Gherkin Test Cases
     {
