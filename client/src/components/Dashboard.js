@@ -3,10 +3,48 @@ import React from 'react';
 const Dashboard = ({ setActiveComponent }) => {
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+      {/* MVP Introduction and Disclaimer */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 shadow-lg">
+        <h2 className="text-2xl font-bold mb-4 text-white">Welcome to AITestImpact</h2>
+        
+        <div className="prose prose-invert max-w-none">
+          <p className="text-gray-300">
+            AITestImpact is an AI-powered platform designed to revolutionize your software testing process by automatically generating test cases, analyzing requirements, and providing testing insights.
+          </p>
+          
+          <div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-4 my-4">
+            <h3 className="text-amber-400 text-lg font-medium flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Important Disclaimer - MVP Version
+            </h3>
+            <p className="mt-2">
+              This is a <strong>Minimum Viable Product (MVP)</strong> version of AITestImpact. The platform is still under active development and may contain bugs, inconsistencies, or produce unexpected results.
+            </p>
+            <p className="mt-2">
+              <strong>Use at your own risk.</strong> The AI-generated content should be reviewed by professionals before being used in production environments. We do not guarantee the accuracy, completeness, or reliability of the generated test cases and other outputs.
+            </p>
+          </div>
+          
+          <p>
+            This platform provides several AI-powered tools to assist with different aspects of your testing process:
+          </p>
+          
+          <ul className="mt-2">
+            <li>Generate comprehensive test cases from requirements, UI screenshots, or API specs</li>
+            <li>Analyze test coverage to identify gaps in your testing</li>
+            <li>Generate test automation code from your test cases</li>
+            <li>Review requirements for potential issues and improvements</li>
+            <li>Manage and organize your test cases</li>
+          </ul>
+          
+          <p className="mt-4">
+            To get started, select one of the tools from the navigation bar above or explore the features below.
+          </p>
+        </div>
       </div>
-      
+
       {/* Feature Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div 
