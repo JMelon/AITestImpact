@@ -57,11 +57,17 @@ const SearchBar = ({ onResultClick }) => {
   // Simple function to search documentation - would be more sophisticated in a real app
   const searchDocumentation = (term) => {
     const documentationSections = [
-      { id: 'overview', title: 'Platform Overview', content: 'Overview of the TestMatrix platform and its capabilities.', type: 'Documentation' },
-      { id: 'getting-started', title: 'Getting Started Guide', content: 'How to get started with TestMatrix.', type: 'Documentation' },
-      { id: 'test-case-generator', title: 'Test Case Generator Documentation', content: 'Generate test cases from various inputs including requirements, UI designs, or API specs.', type: 'Documentation' },
-      { id: 'coverage-analyzer', title: 'Coverage Analyzer Documentation', content: 'Analyze test coverage against requirements to identify gaps.', type: 'Documentation' },
-      { id: 'api-docs', title: 'API Reference', content: 'Detailed API documentation for integrating with TestMatrix.', type: 'Documentation' }
+      { id: 'overview', title: 'AITestImpact Platform Overview', content: 'Overview of the AITestImpact platform and its capabilities for generating test cases, analyzing coverage, and reviewing requirements.', type: 'Documentation' },
+      { id: 'getting-started', title: 'Getting Started Guide', content: 'How to get started with AITestImpact, configure your API key, and use the basic features.', type: 'Documentation' },
+      { id: 'security-disclaimer', title: 'Security Disclaimer', content: 'Important security warnings about this application not having undergone security testing and not being suitable for sensitive data.', type: 'Documentation' },
+      { id: 'test-generator', title: 'Test Case Generator Documentation', content: 'Generate test cases from various inputs including requirements, UI designs, or API specs. Configure outputs in Procedural or Gherkin format.', type: 'Documentation' },
+      { id: 'coverage-analyzer', title: 'Coverage Analyzer Documentation', content: 'Analyze test coverage against requirements to identify gaps and generate test cases for missing areas.', type: 'Documentation' },
+      { id: 'test-code-generator', title: 'Test Code Generator Documentation', content: 'Convert test cases into executable automation code for Selenium, RestAssured, Appium, and other frameworks.', type: 'Documentation' },
+      { id: 'requirement-review', title: 'Requirement Review Documentation', content: 'Analyze requirements for quality issues like ambiguities, contradictions, security vulnerabilities, and missing details.', type: 'Documentation' },
+      { id: 'test-management', title: 'Test Case Management Documentation', content: 'Organize, track, and manage your test cases throughout the testing lifecycle.', type: 'Documentation' },
+      { id: 'api-reference', title: 'API Reference', content: 'Detailed API documentation for integrating with AITestImpact, including endpoints for test generation, coverage analysis, and code generation.', type: 'Documentation' },
+      { id: 'for-developers', title: 'For Developers Guide', content: 'Technical information for developers who want to contribute to the AITestImpact platform or run it locally for development purposes.', type: 'Documentation' },
+      { id: 'faq', title: 'Frequently Asked Questions', content: 'Answers to common questions about data security, API usage, test generation quality, and platform capabilities.', type: 'Documentation' }
     ];
     
     return documentationSections.filter(section => 
