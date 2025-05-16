@@ -44,9 +44,14 @@ function App() {
                   <svg className="h-7 w-7 sm:h-8 sm:w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span className="ml-1 sm:ml-2 text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-600 truncate">
-                    AITestImpact
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="ml-1 sm:ml-2 text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-600 truncate">
+                      AITestImpact
+                    </span>
+                    <span className="ml-1 sm:ml-2 text-xs text-gray-400 -mt-1 flex items-center">
+                      Built by AI <svg className="h-2.5 w-2.5 mx-1 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> Powered by AI
+                    </span>
+                  </div>
                 </div>
               </div>
               
