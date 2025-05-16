@@ -131,43 +131,63 @@ const TestCaseManager = () => {
             <span className="font-semibold text-blue-400">{filtered.length}</span> test{filtered.length !== 1 ? 's' : ''} shown.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <input
-            type="text"
-            placeholder="Search by title, content, or tag..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
-            style={{ minWidth: 180 }}
-          />
-          <select
-            value={priorityFilter}
-            onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
-          >
-            {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          <select
-            value={severityFilter}
-            onChange={e => setSeverityFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
-          >
-            {SEVERITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          <select
-            value={formatFilter}
-            onChange={e => setFormatFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
-          >
-            {FORMAT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          <select
-            value={stateFilter}
-            onChange={e => setStateFilter(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
-          >
-            {STATE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1" htmlFor="searchFilter">Search</label>
+            <input
+              id="searchFilter"
+              type="text"
+              placeholder="Search by title, content, or tag..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              style={{ minWidth: 180 }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1" htmlFor="priorityFilter">Priority</label>
+            <select
+              id="priorityFilter"
+              value={priorityFilter}
+              onChange={e => setPriorityFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+            >
+              {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1" htmlFor="severityFilter">Severity</label>
+            <select
+              id="severityFilter"
+              value={severityFilter}
+              onChange={e => setSeverityFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+            >
+              {SEVERITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1" htmlFor="formatFilter">Format</label>
+            <select
+              id="formatFilter"
+              value={formatFilter}
+              onChange={e => setFormatFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+            >
+              {FORMAT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1" htmlFor="stateFilter">Status</label>
+            <select
+              id="stateFilter"
+              value={stateFilter}
+              onChange={e => setStateFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+            >
+              {STATE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -189,10 +209,10 @@ const TestCaseManager = () => {
             <thead>
               <tr>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Title</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Priority</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Severity</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Tags</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-2/5">Title</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Priority</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Severity</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-1/12">Tags</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Format</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Status</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Details</th>
@@ -375,22 +395,22 @@ const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
     <>
       <tr className={`border-b border-gray-700 ${expanded ? 'bg-gray-900/70' : ''}`}>
         <td className="px-3 py-2 text-sm text-gray-400">{index + 1}</td>
-        <td className="px-3 py-2 text-sm font-medium text-white">{testCase.title || <span className="italic text-gray-500">Untitled</span>}</td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2 text-sm font-medium text-white w-2/5">{testCase.title || <span className="italic text-gray-500">Untitled</span>}</td>
+        <td className="px-3 py-2 w-1/12">
           <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${getPriorityColor(testCase.priority)}`}>
             {testCase.priority || '—'}
           </span>
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2 w-1/12">
           <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${getSeverityColor(testCase.severity)}`}>
             {testCase.severity || '—'}
           </span>
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2 w-1/12">
           {testCase.tags && testCase.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 max-w-[90px]">
               {testCase.tags.map((tag, i) => (
-                <span key={i} className="bg-gray-700 text-xs px-2 py-0.5 rounded">{tag}</span>
+                <span key={i} className="bg-gray-700 text-xs px-1 py-0.5 rounded truncate">{tag}</span>
               ))}
             </div>
           ) : (
