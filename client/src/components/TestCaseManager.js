@@ -26,6 +26,10 @@ const TestCaseManager = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
 
   // Fetch test cases on mount
   useEffect(() => {
@@ -72,6 +76,49 @@ const TestCaseManager = () => {
     setFiltered(result);
     setPage(1); // Reset to first page on filter/search change
   }, [search, testCases, priorityFilter, severityFilter, formatFilter, stateFilter]);
+
+  // Handle select all on current page
+  const handleSelectAll = (checked, pagedTestCases) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedIds(pagedTestCases.map(tc => tc._id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  // Handle single row select
+  const handleSelectRow = (id, checked) => {
+    setSelectedIds(prev =>
+      checked ? [...prev, id] : prev.filter(selId => selId !== id)
+    );
+  };
+
+  // Bulk action handler
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedIds.length === 0) return;
+    setBulkActionInProgress(true);
+    try {
+      if (bulkAction === 'delete') {
+        await Promise.all(selectedIds.map(id =>
+          axios.delete(`http://localhost:5000/api/test-cases/${id}`)
+        ));
+      } else if (bulkAction.startsWith('set-status-')) {
+        const newState = bulkAction.replace('set-status-', '');
+        await Promise.all(selectedIds.map(id =>
+          axios.put(`http://localhost:5000/api/test-cases/${id}`, { state: newState })
+        ));
+      }
+      setSelectedIds([]);
+      setSelectAll(false);
+      setBulkAction('');
+      fetchTestCases();
+    } catch (err) {
+      alert('Bulk action failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
 
   // Paging logic
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -199,6 +246,42 @@ const TestCaseManager = () => {
         </div>
       </div>
 
+      {/* Bulk actions bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-2">
+        <input
+          type="checkbox"
+          checked={selectAll}
+          onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
+          className="mr-2"
+          aria-label="Select all on page"
+        />
+        <span className="text-xs text-gray-400 mr-2">Select All</span>
+        <select
+          value={bulkAction}
+          onChange={e => setBulkAction(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+        >
+          <option value="">Bulk Actions</option>
+          <option value="delete">Delete Selected</option>
+          <option value="set-status-Draft">Set Status: Draft</option>
+          <option value="set-status-Ready">Set Status: Ready</option>
+          <option value="set-status-In Progress">Set Status: In Progress</option>
+          <option value="set-status-Pass">Set Status: Pass</option>
+          <option value="set-status-Fail">Set Status: Fail</option>
+          <option value="set-status-Blocked">Set Status: Blocked</option>
+        </select>
+        <button
+          className={`px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white ${bulkActionInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={handleBulkAction}
+          disabled={!bulkAction || selectedIds.length === 0 || bulkActionInProgress}
+        >
+          Apply
+        </button>
+        {selectedIds.length > 0 && (
+          <span className="text-xs text-gray-400 ml-2">{selectedIds.length} selected</span>
+        )}
+      </div>
+
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
@@ -217,6 +300,14 @@ const TestCaseManager = () => {
             <table className="min-w-full bg-gray-800 rounded-lg border border-gray-700">
               <thead>
                 <tr>
+                  <th className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
+                      aria-label="Select all on page"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
                   <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-2/5">Title</th>
                   <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Priority</th>
@@ -362,6 +453,8 @@ const TestCaseManager = () => {
                       index={(page - 1) * pageSize + idx}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      selected={selectedIds.includes(tc._id)}
+                      onSelect={handleSelectRow}
                     />
                   )
                 )}
@@ -447,12 +540,20 @@ const TestCaseManager = () => {
   );
 };
 
-const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
+const TestCaseRow = ({ testCase, index, onEdit, onDelete, selected, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <>
       <tr className={`border-b border-gray-700 ${expanded ? 'bg-gray-900/70' : ''}`}>
+        <td className="px-3 py-2">
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={e => onSelect(testCase._id, e.target.checked)}
+            aria-label="Select row"
+          />
+        </td>
         <td className="px-3 py-2 text-sm text-gray-400">{index + 1}</td>
         <td className="px-3 py-2 text-sm font-medium text-white w-2/5">{testCase.title || <span className="italic text-gray-500">Untitled</span>}</td>
         <td className="px-3 py-2 w-1/12">
@@ -503,7 +604,7 @@ const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={9} className="bg-gray-900/80 px-6 py-4 border-b border-gray-800">
+          <td colSpan={10} className="bg-gray-900/80 px-6 py-4 border-b border-gray-800">
             <div className="prose prose-invert max-w-none text-sm">
               <ReactMarkdown components={{ code: CodeBlock }}>
                 {testCase.content || '_No details available_'}
