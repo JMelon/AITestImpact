@@ -8,6 +8,7 @@ const PRIORITY_OPTIONS = ['All', 'P0-Critical', 'P1-High', 'P2-Medium', 'P3-Low'
 const SEVERITY_OPTIONS = ['All', 'Blocker', 'Critical', 'Major', 'Minor'];
 const FORMAT_OPTIONS = ['All', 'Procedural', 'Gherkin'];
 const STATE_OPTIONS = ['All', 'Draft', 'Ready', 'In Progress', 'Pass', 'Fail', 'Blocked'];
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 const TestCaseManager = () => {
   const [testCases, setTestCases] = useState([]);
@@ -23,6 +24,8 @@ const TestCaseManager = () => {
   const [editData, setEditData] = useState({});
   const [deleteId, setDeleteId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
 
   // Fetch test cases on mount
   useEffect(() => {
@@ -67,7 +70,12 @@ const TestCaseManager = () => {
       );
     }
     setFiltered(result);
+    setPage(1); // Reset to first page on filter/search change
   }, [search, testCases, priorityFilter, severityFilter, formatFilter, stateFilter]);
+
+  // Paging logic
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pagedTestCases = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // CRUD: Edit
   const handleEdit = (tc) => {
@@ -204,161 +212,212 @@ const TestCaseManager = () => {
           No test cases found.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-gray-800 rounded-lg border border-gray-700">
-            <thead>
-              <tr>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-2/5">Title</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Priority</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Severity</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-1/12">Tags</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Format</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Status</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Details</th>
-                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((tc, idx) =>
-                editId === tc._id ? (
-                  <tr key={tc._id || idx} className="bg-gray-900/80 border-b border-gray-700">
-                    <td className="px-3 py-2 text-sm text-gray-400 align-top">{idx + 1}</td>
-                    <td className="px-3 py-2 align-top" colSpan={8}>
-                      <form
-                        className="bg-gray-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-6"
-                        onSubmit={e => {
-                          e.preventDefault();
-                          handleEditSave(tc._id);
-                        }}
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-title">Title</label>
-                            <input
-                              id="edit-title"
-                              type="text"
-                              name="title"
-                              value={editData.title}
-                              onChange={handleEditChange}
-                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-priority">Priority</label>
-                              <select
-                                id="edit-priority"
-                                name="priority"
-                                value={editData.priority}
-                                onChange={handleEditChange}
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-                              >
-                                {PRIORITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                              </select>
-                            </div>
-                            <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-severity">Severity</label>
-                              <select
-                                id="edit-severity"
-                                name="severity"
-                                value={editData.severity}
-                                onChange={handleEditChange}
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-                              >
-                                {SEVERITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-format">Format</label>
-                              <select
-                                id="edit-format"
-                                name="format"
-                                value={editData.format}
-                                onChange={handleEditChange}
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-                              >
-                                {FORMAT_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                              </select>
-                            </div>
-                            <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-tags">Tags</label>
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-gray-800 rounded-lg border border-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-2/5">Title</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Priority</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap w-1/12">Severity</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-1/12">Tags</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Format</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Status</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Details</th>
+                  <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedTestCases.map((tc, idx) =>
+                  editId === tc._id ? (
+                    <tr key={tc._id || idx} className="bg-gray-900/80 border-b border-gray-700">
+                      <td className="px-3 py-2 text-sm text-gray-400 align-top">{(page - 1) * pageSize + idx + 1}</td>
+                      <td className="px-3 py-2 align-top" colSpan={8}>
+                        <form
+                          className="bg-gray-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-6"
+                          onSubmit={e => {
+                            e.preventDefault();
+                            handleEditSave(tc._id);
+                          }}
+                        >
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-title">Title</label>
                               <input
-                                id="edit-tags"
+                                id="edit-title"
                                 type="text"
-                                name="tags"
-                                value={editData.tags}
+                                name="title"
+                                value={editData.title}
                                 onChange={handleEditChange}
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-                                placeholder="Comma separated"
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                autoFocus
                               />
                             </div>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-priority">Priority</label>
+                                <select
+                                  id="edit-priority"
+                                  name="priority"
+                                  value={editData.priority}
+                                  onChange={handleEditChange}
+                                  className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                                >
+                                  {PRIORITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-severity">Severity</label>
+                                <select
+                                  id="edit-severity"
+                                  name="severity"
+                                  value={editData.severity}
+                                  onChange={handleEditChange}
+                                  className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                                >
+                                  {SEVERITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-format">Format</label>
+                                <select
+                                  id="edit-format"
+                                  name="format"
+                                  value={editData.format}
+                                  onChange={handleEditChange}
+                                  className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                                >
+                                  {FORMAT_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-tags">Tags</label>
+                                <input
+                                  id="edit-tags"
+                                  type="text"
+                                  name="tags"
+                                  value={editData.tags}
+                                  onChange={handleEditChange}
+                                  className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                                  placeholder="Comma separated"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-state">State</label>
+                              <select
+                                id="edit-state"
+                                name="state"
+                                value={editData.state}
+                                onChange={handleEditChange}
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                              >
+                                <option value="Draft">Draft</option>
+                                <option value="Ready">Ready</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Pass">Pass</option>
+                                <option value="Fail">Fail</option>
+                                <option value="Blocked">Blocked</option>
+                              </select>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-state">State</label>
-                            <select
-                              id="edit-state"
-                              name="state"
-                              value={editData.state}
+                          <div className="flex flex-col h-full">
+                            <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-content">Test Case Body</label>
+                            <textarea
+                              id="edit-content"
+                              name="content"
+                              value={editData.content}
                               onChange={handleEditChange}
-                              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-                            >
-                              <option value="Draft">Draft</option>
-                              <option value="Ready">Ready</option>
-                              <option value="In Progress">In Progress</option>
-                              <option value="Pass">Pass</option>
-                              <option value="Fail">Fail</option>
-                              <option value="Blocked">Blocked</option>
-                            </select>
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+                              rows={18}
+                              style={{ minHeight: 320, maxHeight: 700, resize: 'vertical' }}
+                              placeholder="Test case body/content"
+                            />
+                            <div className="flex gap-2 mt-4 justify-end">
+                              <button
+                                type="button"
+                                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white"
+                                onClick={() => setEditId(null)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-xs text-white"
+                              >
+                                Save
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col h-full">
-                          <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-content">Test Case Body</label>
-                          <textarea
-                            id="edit-content"
-                            name="content"
-                            value={editData.content}
-                            onChange={handleEditChange}
-                            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white"
-                            rows={18}
-                            style={{ minHeight: 320, maxHeight: 700, resize: 'vertical' }}
-                            placeholder="Test case body/content"
-                          />
-                          <div className="flex gap-2 mt-4 justify-end">
-                            <button
-                              type="button"
-                              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white"
-                              onClick={() => setEditId(null)}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-xs text-white"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        </div>
-                      </form>
-                    </td>
-                  </tr>
-                ) : (
-                  <TestCaseRow
-                    key={tc._id || idx}
-                    testCase={tc}
-                    index={idx}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : (
+                    <TestCaseRow
+                      key={tc._id || idx}
+                      testCase={tc}
+                      index={(page - 1) * pageSize + idx}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mt-4 gap-2">
+            <div className="text-xs text-gray-400 mb-2 md:mb-0">
+              Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, filtered.length)} of {filtered.length}
+            </div>
+            <div className="flex gap-2 items-center">
+              <button
+                className="px-3 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+              >
+                First
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+              <span className="px-2 py-1 text-xs text-gray-400">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                className="px-3 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+              >
+                Last
+              </button>
+              <div className="ml-4 flex items-center">
+                <label className="text-xs text-gray-400 mr-2" htmlFor="pageSizeSelect">Per Page</label>
+                <select
+                  id="pageSizeSelect"
+                  value={pageSize}
+                  onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+                >
+                  {PAGE_SIZE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Delete confirmation modal */}
