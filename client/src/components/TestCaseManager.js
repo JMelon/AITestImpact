@@ -1,929 +1,425 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeBlock from './CodeBlock';
+import { getPriorityColor, getSeverityColor } from '../utils/formatters';
 
-// Custom renderer for code blocks in Markdown
-const CodeBlock = ({ node, inline, className, children, ...props }) => {
-  const match = /language-(\w+)/.exec(className || '');
-  return !inline && match ? (
-    <SyntaxHighlighter
-      style={vscDarkPlus}
-      language={match[1]}
-      PreTag="div"
-      customStyle={{ 
-        margin: '1rem 0', 
-        borderRadius: '0.375rem' 
-      }}
-      showLineNumbers={true}
-      {...props}
-    >
-      {String(children).replace(/\n$/, '')}
-    </SyntaxHighlighter>
-  ) : (
-    <code className={className ? `${className} bg-gray-800 px-1 rounded` : 'bg-gray-800 px-1 rounded'} {...props}>
-      {children}
-    </code>
-  );
-};
+const PRIORITY_OPTIONS = ['All', 'P0-Critical', 'P1-High', 'P2-Medium', 'P3-Low'];
+const SEVERITY_OPTIONS = ['All', 'Blocker', 'Critical', 'Major', 'Minor'];
+const FORMAT_OPTIONS = ['All', 'Procedural', 'Gherkin'];
 
 const TestCaseManager = () => {
-  // State variables
   const [testCases, setTestCases] = useState([]);
-  const [selectedTestCase, setSelectedTestCase] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line no-unused-vars
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    format: 'Procedural',
-    priority: 'P2-Medium',
-    severity: 'Major',
-    category: 'UI',
-    tags: '',
-    state: 'Draft',
-    result: 'Not Run'
-  });
-  const [filterState, setFilterState] = useState('All');
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [filterPriority, setFilterPriority] = useState('All');
-  const [filterResult, setFilterResult] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [testCaseToDelete, setTestCaseToDelete] = useState(null);
-  const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
-  const [selectedForBulkDelete, setSelectedForBulkDelete] = useState({});
-  
+  const [search, setSearch] = useState('');
+  const [filtered, setFiltered] = useState([]);
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [severityFilter, setSeverityFilter] = useState('All');
+  const [formatFilter, setFormatFilter] = useState('All');
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   // Fetch test cases on mount
   useEffect(() => {
     fetchTestCases();
+    // eslint-disable-next-line
   }, []);
 
-  // CRUD operations
   const fetchTestCases = async () => {
     setLoading(true);
+    setError('');
     try {
-      const response = await axios.get('http://localhost:5000/api/test-cases');
-      setTestCases(response.data);
-      setError('');
+      const res = await axios.get('http://localhost:5000/api/test-cases');
+      setTestCases(res.data || []);
     } catch (err) {
-      setError('Failed to fetch test cases');
-      console.error('Error:', err);
+      setError('Failed to load test cases');
     } finally {
       setLoading(false);
     }
   };
 
-  const viewTestCase = async (id) => {
-    setIsEditing(false);
-    setLoading(true);
-    try {
-      const response = await axios.get(`http://localhost:5000/api/test-cases/${id}`);
-      setSelectedTestCase(response.data);
-      setFormData({
-        title: response.data.title,
-        content: response.data.content,
-        format: response.data.format,
-        priority: response.data.priority,
-        severity: response.data.severity,
-        category: response.data.category,
-        tags: response.data.tags.join(', '),
-        state: response.data.state,
-        result: response.data.result
-      });
-      setError('');
-    } catch (err) {
-      setError('Failed to fetch test case details');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
+  // Filtering logic
+  useEffect(() => {
+    let result = [...testCases];
+    if (priorityFilter !== 'All') {
+      result = result.filter(tc => tc.priority === priorityFilter);
     }
-  };
-
-  const createTestCase = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.post('http://localhost:5000/api/test-cases', {
-        ...formData,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
-      });
-      
-      // Reset form and fetch updated list
-      setFormData({
-        title: '',
-        content: '',
-        format: 'Procedural',
-        priority: 'P2-Medium',
-        severity: 'Major',
-        category: 'UI',
-        tags: '',
-        state: 'Draft',
-        result: 'Not Run'
-      });
-      setIsEditing(false);
-      setSelectedTestCase(null);
-      await fetchTestCases();
-      setError('');
-    } catch (err) {
-      setError('Failed to create test case');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
+    if (severityFilter !== 'All') {
+      result = result.filter(tc => tc.severity === severityFilter);
     }
-  };
-
-  const updateTestCase = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await axios.put(`http://localhost:5000/api/test-cases/${selectedTestCase._id}`, {
-        ...formData,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
-      });
-      
-      setIsEditing(false);
-      await fetchTestCases();
-      // Refresh the selected test case view
-      await viewTestCase(selectedTestCase._id);
-      setError('');
-    } catch (err) {
-      setError('Failed to update test case');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
+    if (formatFilter !== 'All') {
+      result = result.filter(tc => tc.format === formatFilter);
     }
-  };
-
-  // Delete operations
-  const initiateDelete = (id) => {
-    const testCase = testCases.find(tc => tc._id === id);
-    if (testCase) {
-      setTestCaseToDelete(testCase);
-      setShowDeleteModal(true);
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      result = result.filter(tc =>
+        (tc.title && tc.title.toLowerCase().includes(s)) ||
+        (tc.content && tc.content.toLowerCase().includes(s)) ||
+        (tc.tags && tc.tags.join(' ').toLowerCase().includes(s))
+      );
     }
-  };
+    setFiltered(result);
+  }, [search, testCases, priorityFilter, severityFilter, formatFilter]);
 
-  const deleteTestCase = async () => {
-    if (!testCaseToDelete) return;
-    
-    setDeleteInProgress(true);
-    try {
-      await axios.delete(`http://localhost:5000/api/test-cases/${testCaseToDelete._id}`);
-      
-      setDeleteSuccess(true);
-      
-      setTimeout(() => {
-        setShowDeleteModal(false);
-        setDeleteSuccess(false);
-        setTestCaseToDelete(null);
-        setSelectedTestCase(null);
-        fetchTestCases();
-      }, 1500);
-    } catch (err) {
-      setError(`Failed to delete test case: ${err.response?.data?.error || err.message}`);
-      setTimeout(() => {
-        setShowDeleteModal(false);
-        setTestCaseToDelete(null);
-      }, 2000);
-    } finally {
-      setDeleteInProgress(false);
-    }
-  };
-
-  // Bulk delete operations
-  const toggleBulkDeleteMode = () => {
-    setBulkDeleteMode(!bulkDeleteMode);
-    setSelectedForBulkDelete({});
-  };
-
-  const toggleBulkDeleteSelection = (id) => {
-    setSelectedForBulkDelete(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const selectAllForBulkDelete = () => {
-    const selected = {};
-    filteredTestCases.forEach(tc => {
-      selected[tc._id] = true;
+  // CRUD: Edit
+  const handleEdit = (tc) => {
+    setEditId(tc._id);
+    setEditData({
+      title: tc.title || '',
+      content: tc.content || '',
+      priority: tc.priority || 'P2-Medium',
+      severity: tc.severity || 'Major',
+      format: tc.format || 'Procedural',
+      tags: tc.tags ? tc.tags.join(', ') : '',
+      state: tc.state || 'Draft'
     });
-    setSelectedForBulkDelete(selected);
   };
 
-  const deselectAllForBulkDelete = () => {
-    setSelectedForBulkDelete({});
+  const handleEditChange = (e) => {
+    setEditData({ ...editData, [e.target.name]: e.target.value });
   };
 
-  const bulkDeleteSelectedTestCases = async () => {
-    const selectedIds = Object.keys(selectedForBulkDelete).filter(id => selectedForBulkDelete[id]);
-    
-    if (selectedIds.length === 0) {
-      setError('No test cases selected for deletion');
-      return;
-    }
-    
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} test cases? This cannot be undone.`)) {
-      return;
-    }
-    
-    setDeleteInProgress(true);
+  const handleEditSave = async (id) => {
     try {
-      await Promise.all(selectedIds.map(id => 
-        axios.delete(`http://localhost:5000/api/test-cases/${id}`)
-      ));
-      
-      setSelectedForBulkDelete({});
-      setBulkDeleteMode(false);
-      if (selectedIds.includes(selectedTestCase?._id)) {
-        setSelectedTestCase(null);
-      }
-      
-      await fetchTestCases();
-      setError('');
+      await axios.put(`http://localhost:5000/api/test-cases/${id}`, {
+        ...editData,
+        tags: editData.tags.split(',').map(t => t.trim()).filter(Boolean)
+      });
+      setEditId(null);
+      fetchTestCases();
     } catch (err) {
-      setError(`Failed to delete test cases: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setDeleteInProgress(false);
+      alert('Failed to update test case');
     }
   };
 
-  // Form and UI handlers
-  const onChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // CRUD: Delete
+  const handleDelete = (id) => {
+    setDeleteId(id);
+    setDeleteConfirm(true);
   };
 
-  const startEditing = () => {
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    if (selectedTestCase) {
-      setFormData({
-        title: selectedTestCase.title,
-        content: selectedTestCase.content,
-        format: selectedTestCase.format,
-        priority: selectedTestCase.priority,
-        severity: selectedTestCase.severity,
-        category: selectedTestCase.category,
-        tags: selectedTestCase.tags.join(', '),
-        state: selectedTestCase.state,
-        result: selectedTestCase.result
-      });
-    } else {
-      setFormData({
-        title: '',
-        content: '',
-        format: 'Procedural',
-        priority: 'P2-Medium',
-        severity: 'Major',
-        category: 'UI',
-        tags: '',
-        state: 'Draft',
-        result: 'Not Run'
-      });
-    }
-    setIsEditing(false);
-  };
-
-  const startNew = () => {
-    setSelectedTestCase(null);
-    setFormData({
-      title: '',
-      content: '',
-      format: 'Procedural',
-      priority: 'P2-Medium',
-      severity: 'Major',
-      category: 'UI',
-      tags: '',
-      state: 'Draft',
-      result: 'Not Run'
-    });
-    setIsEditing(true);
-  };
-
-  // Filtering and styling helpers
-  const filteredTestCases = testCases.filter(testCase => {
-    return (filterState === 'All' || testCase.state === filterState) &&
-           (filterCategory === 'All' || testCase.category === filterCategory) &&
-           (filterPriority === 'All' || testCase.priority === filterPriority) &&
-           (filterResult === 'All' || testCase.result === filterResult) &&
-           (searchTerm === '' || 
-            testCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            testCase.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            testCase.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
-  });
-
-  const getStateColor = (state) => {
-    switch (state) {
-      case 'Draft': return 'bg-blue-600';
-      case 'Review': return 'bg-yellow-600';
-      case 'Approved': return 'bg-green-600';
-      case 'Obsolete': return 'bg-gray-600';
-      default: return 'bg-gray-600';
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`http://localhost:5000/api/test-cases/${deleteId}`);
+      setDeleteId(null);
+      setDeleteConfirm(false);
+      fetchTestCases();
+    } catch (err) {
+      alert('Failed to delete test case');
     }
   };
 
-  const getResultColor = (result) => {
-    switch (result) {
-      case 'Pass': return 'bg-green-600';
-      case 'Fail': return 'bg-red-600';
-      case 'Blocked': return 'bg-yellow-600';
-      case 'Not Run': return 'bg-gray-600';
-      default: return 'bg-gray-600';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'P0-Critical': return 'bg-red-600';
-      case 'P1-High': return 'bg-orange-600';
-      case 'P2-Medium': return 'bg-yellow-600';
-      case 'P3-Low': return 'bg-blue-600';
-      default: return 'bg-gray-600';
-    }
+  const cancelDelete = () => {
+    setDeleteId(null);
+    setDeleteConfirm(false);
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      {/* Left sidebar with test case list */}
-      <div className="w-full md:w-1/3 bg-gray-900 rounded-xl p-6 overflow-hidden flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Test Cases</h3>
-          <div className="flex gap-2">
-            {bulkDeleteMode ? (
+    <div className="bg-gray-900 rounded-xl p-6 max-w-5xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Test Case Library</h2>
+          <p className="text-gray-400 text-sm">
+            <span className="font-semibold text-blue-400">{filtered.length}</span> test{filtered.length !== 1 ? 's' : ''} shown.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Search by title, content, or tag..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            style={{ minWidth: 180 }}
+          />
+          <select
+            value={priorityFilter}
+            onChange={e => setPriorityFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+          >
+            {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+          <select
+            value={severityFilter}
+            onChange={e => setSeverityFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+          >
+            {SEVERITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+          <select
+            value={formatFilter}
+            onChange={e => setFormatFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+          >
+            {FORMAT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-lg text-center">
+          {error}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center text-gray-400 py-12">
+          No test cases found.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-gray-800 rounded-lg border border-gray-700">
+            <thead>
+              <tr>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Title</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Priority</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Severity</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Tags</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Format</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Details</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((tc, idx) =>
+                editId === tc._id ? (
+                  <tr key={tc._id || idx} className="bg-gray-900/80 border-b border-gray-700">
+                    <td className="px-3 py-2 text-sm text-gray-400 align-top">{idx + 1}</td>
+                    <td className="px-3 py-2 align-top" colSpan={7}>
+                      <form
+                        className="bg-gray-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-6"
+                        onSubmit={e => {
+                          e.preventDefault();
+                          handleEditSave(tc._id);
+                        }}
+                      >
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-title">Title</label>
+                            <input
+                              id="edit-title"
+                              type="text"
+                              name="title"
+                              value={editData.title}
+                              onChange={handleEditChange}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-priority">Priority</label>
+                              <select
+                                id="edit-priority"
+                                name="priority"
+                                value={editData.priority}
+                                onChange={handleEditChange}
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                              >
+                                {PRIORITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-severity">Severity</label>
+                              <select
+                                id="edit-severity"
+                                name="severity"
+                                value={editData.severity}
+                                onChange={handleEditChange}
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                              >
+                                {SEVERITY_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-format">Format</label>
+                              <select
+                                id="edit-format"
+                                name="format"
+                                value={editData.format}
+                                onChange={handleEditChange}
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                              >
+                                {FORMAT_OPTIONS.slice(1).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-tags">Tags</label>
+                              <input
+                                id="edit-tags"
+                                type="text"
+                                name="tags"
+                                value={editData.tags}
+                                onChange={handleEditChange}
+                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                                placeholder="Comma separated"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-state">State</label>
+                            <select
+                              id="edit-state"
+                              name="state"
+                              value={editData.state}
+                              onChange={handleEditChange}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                            >
+                              <option value="Draft">Draft</option>
+                              <option value="Ready">Ready</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Pass">Pass</option>
+                              <option value="Fail">Fail</option>
+                              <option value="Blocked">Blocked</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex flex-col h-full">
+                          <label className="block text-xs font-semibold text-gray-400 mb-1" htmlFor="edit-content">Test Case Body</label>
+                          <textarea
+                            id="edit-content"
+                            name="content"
+                            value={editData.content}
+                            onChange={handleEditChange}
+                            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+                            rows={18}
+                            style={{ minHeight: 320, maxHeight: 700, resize: 'vertical' }}
+                            placeholder="Test case body/content"
+                          />
+                          <div className="flex gap-2 mt-4 justify-end">
+                            <button
+                              type="button"
+                              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white"
+                              onClick={() => setEditId(null)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-xs text-white"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <TestCaseRow
+                    key={tc._id || idx}
+                    testCase={tc}
+                    index={idx}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4 text-red-400">Confirm Delete</h3>
+            <p className="mb-6 text-gray-300">Are you sure you want to delete this test case?</p>
+            <div className="flex justify-end gap-3">
               <button
-                onClick={toggleBulkDeleteMode}
-                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
-                disabled={deleteInProgress}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                onClick={cancelDelete}
               >
                 Cancel
               </button>
-            ) : (
               <button
-                onClick={startNew}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white"
+                onClick={confirmDelete}
               >
-                New Test Case
-              </button>
-            )}
-            <button
-              onClick={toggleBulkDeleteMode}
-              className={`px-3 py-1 rounded text-sm ${bulkDeleteMode ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'}`}
-            >
-              {bulkDeleteMode ? 'Delete Selected' : 'Bulk Delete'}
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-4 bg-gray-800 p-3 rounded-lg">
-          <h4 className="text-sm font-medium mb-2">Filters</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label htmlFor="filterState" className="block text-xs mb-1">State</label>
-              <select
-                id="filterState"
-                value={filterState}
-                onChange={(e) => setFilterState(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 py-1 px-2 rounded text-sm"
-              >
-                <option value="All">All States</option>
-                <option value="Draft">Draft</option>
-                <option value="Review">Review</option>
-                <option value="Approved">Approved</option>
-                <option value="Obsolete">Obsolete</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="filterCategory" className="block text-xs mb-1">Category</label>
-              <select
-                id="filterCategory"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 py-1 px-2 rounded text-sm"
-              >
-                <option value="All">All Categories</option>
-                <option value="UI">UI</option>
-                <option value="API">API</option>
-                <option value="Integration">Integration</option>
-                <option value="Performance">Performance</option>
-                <option value="Security">Security</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="filterPriority" className="block text-xs mb-1">Priority</label>
-              <select
-                id="filterPriority"
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 py-1 px-2 rounded text-sm"
-              >
-                <option value="All">All Priorities</option>
-                <option value="P0-Critical">P0-Critical</option>
-                <option value="P1-High">P1-High</option>
-                <option value="P2-Medium">P2-Medium</option>
-                <option value="P3-Low">P3-Low</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="filterResult" className="block text-xs mb-1">Result</label>
-              <select
-                id="filterResult"
-                value={filterResult}
-                onChange={(e) => setFilterResult(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 py-1 px-2 rounded text-sm"
-              >
-                <option value="All">All Results</option>
-                <option value="Pass">Pass</option>
-                <option value="Fail">Fail</option>
-                <option value="Blocked">Blocked</option>
-                <option value="Not Run">Not Run</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-2">
-            <input
-              type="text"
-              placeholder="Search by title, content or tags..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 py-1 px-2 rounded text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Test case list */}
-        <div className="flex-1 overflow-y-auto">
-          {error && (
-            <div className="bg-red-900/30 border border-red-800 text-red-200 p-3 rounded-lg mb-4 text-sm">
-              {error}
-            </div>
-          )}
-          
-          {bulkDeleteMode && filteredTestCases.length > 0 && (
-            <div className="flex justify-between items-center mb-2 p-2 bg-gray-800 rounded">
-              <div className="text-sm">
-                {Object.values(selectedForBulkDelete).filter(Boolean).length} selected
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  className="text-xs text-blue-400 hover:text-blue-300"
-                  onClick={selectAllForBulkDelete}
-                >
-                  Select All
-                </button>
-                <button 
-                  className="text-xs text-blue-400 hover:text-blue-300"
-                  onClick={deselectAllForBulkDelete}
-                >
-                  Deselect All
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {loading && testCases.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-gray-400">
-              <div className="animate-pulse">Loading test cases...</div>
-            </div>
-          ) : filteredTestCases.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              {testCases.length === 0 ? 
-                "No test cases found. Create your first one!" : 
-                "No test cases match your filters."}
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {filteredTestCases.map(testCase => (
-                <li 
-                  key={testCase._id}
-                  className={`border border-gray-700 rounded-lg p-3 ${
-                    bulkDeleteMode ? '' : 'cursor-pointer hover:bg-gray-800'
-                  } transition-colors ${
-                    selectedTestCase?._id === testCase._id ? 'ring-2 ring-blue-500' : ''
-                  }`}
-                  onClick={() => !bulkDeleteMode && viewTestCase(testCase._id)}
-                >
-                  <div className="flex justify-between mb-1">
-                    {bulkDeleteMode ? (
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="checkbox" 
-                          checked={!!selectedForBulkDelete[testCase._id]}
-                          onChange={() => toggleBulkDeleteSelection(testCase._id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4"
-                        />
-                        <h4 className="font-medium truncate">{testCase.title}</h4>
-                      </div>
-                    ) : (
-                      <h4 className="font-medium truncate">{testCase.title}</h4>
-                    )}
-                    <span className={`text-xs px-2 py-0.5 rounded ${getPriorityColor(testCase.priority)}`}>
-                      {testCase.priority}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {testCase.tags.map((tag, index) => (
-                      <span 
-                        key={index} 
-                        className="text-xs bg-gray-700 px-1.5 py-0.5 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={`text-xs px-2 py-0.5 rounded ${getStateColor(testCase.state)}`}>
-                      {testCase.state}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${getResultColor(testCase.result)}`}>
-                      {testCase.result}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          
-          {bulkDeleteMode && Object.values(selectedForBulkDelete).some(Boolean) && (
-            <div className="mt-4 flex justify-center">
-              <button
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium"
-                onClick={bulkDeleteSelectedTestCases}
-                disabled={deleteInProgress}
-              >
-                {deleteInProgress ? 'Deleting...' : `Delete ${Object.values(selectedForBulkDelete).filter(Boolean).length} Test Cases`}
+                Delete
               </button>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right panel with test case details or editor */}
-      <div className="w-full md:w-2/3 bg-gray-900 rounded-xl p-6 overflow-hidden flex flex-col">
-        {loading && selectedTestCase === null && !isEditing ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="animate-pulse">Loading...</div>
-          </div>
-        ) : isEditing ? (
-          <div className="flex flex-col h-full">
-            <h3 className="text-xl font-semibold mb-4">
-              {selectedTestCase ? 'Edit Test Case' : 'Create New Test Case'}
-            </h3>
-            
-            <form onSubmit={selectedTestCase ? updateTestCase : createTestCase} className="flex flex-col flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium mb-1">
-                    Title:
-                  </label>
-                  <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={onChange}
-                    required
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="format" className="block text-sm font-medium mb-1">
-                    Format:
-                  </label>
-                  <select
-                    id="format"
-                    name="format"
-                    value={formData.format}
-                    onChange={onChange}
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  >
-                    <option value="Procedural">Procedural</option>
-                    <option value="Gherkin">Gherkin</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mb-4 flex-1">
-                <label htmlFor="content" className="block text-sm font-medium mb-1">
-                  Content:
-                </label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={formData.content}
-                  onChange={onChange}
-                  required
-                  className="w-full h-[calc(100%-1.75rem)] min-h-[200px] bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                ></textarea>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label htmlFor="priority" className="block text-sm font-medium mb-1">
-                    Priority:
-                  </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={onChange}
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  >
-                    <option value="P0-Critical">P0-Critical</option>
-                    <option value="P1-High">P1-High</option>
-                    <option value="P2-Medium">P2-Medium</option>
-                    <option value="P3-Low">P3-Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="severity" className="block text-sm font-medium mb-1">
-                    Severity:
-                  </label>
-                  <select
-                    id="severity"
-                    name="severity"
-                    value={formData.severity}
-                    onChange={onChange}
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  >
-                    <option value="Blocker">Blocker</option>
-                    <option value="Critical">Critical</option>
-                    <option value="Major">Major</option>
-                    <option value="Minor">Minor</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium mb-1">
-                    Category:
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={onChange}
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  >
-                    <option value="UI">UI</option>
-                    <option value="API">API</option>
-                    <option value="Integration">Integration</option>
-                    <option value="Performance">Performance</option>
-                    <option value="Security">Security</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium mb-1">
-                    State:
-                  </label>
-                  <select
-                    id="state"
-                    name="state"
-                    value={formData.state}
-                    onChange={onChange}
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  >
-                    <option value="Draft">Draft</option>
-                    <option value="Review">Review</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Obsolete">Obsolete</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label htmlFor="tags" className="block text-sm font-medium mb-1">
-                    Tags (comma separated):
-                  </label>
-                  <input
-                    type="text"
-                    id="tags"
-                    name="tags"
-                    value={formData.tags}
-                    onChange={onChange}
-                    placeholder="e.g., login, security, responsive"
-                    className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                  />
-                </div>
-                {selectedTestCase && (
-                  <div>
-                    <label htmlFor="result" className="block text-sm font-medium mb-1">
-                      Result:
-                    </label>
-                    <select
-                      id="result"
-                      name="result"
-                      value={formData.result}
-                      onChange={onChange}
-                      className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg"
-                    >
-                      <option value="Not Run">Not Run</option>
-                      <option value="Pass">Pass</option>
-                      <option value="Fail">Fail</option>
-                      <option value="Blocked">Blocked</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 mt-auto">
-                <button
-                  type="button"
-                  onClick={cancelEditing}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : selectedTestCase ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : selectedTestCase ? (
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-semibold">{selectedTestCase.title}</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={startEditing}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => initiateDelete(selectedTestCase._id)}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              <div className={`px-2 py-1 rounded text-sm ${getStateColor(selectedTestCase.state)}`}>
-                {selectedTestCase.state}
-              </div>
-              <div className={`px-2 py-1 rounded text-sm ${getResultColor(selectedTestCase.result)}`}>
-                {selectedTestCase.result}
-              </div>
-              <div className={`px-2 py-1 rounded text-sm ${getPriorityColor(selectedTestCase.priority)}`}>
-                {selectedTestCase.priority}
-              </div>
-              <div className="px-2 py-1 bg-gray-700 rounded text-sm">
-                {selectedTestCase.severity}
-              </div>
-              <div className="px-2 py-1 bg-gray-700 rounded text-sm">
-                {selectedTestCase.category}
-              </div>
-              <div className="px-2 py-1 bg-gray-700 rounded text-sm">
-                {selectedTestCase.format}
-              </div>
-            </div>
-
-            {selectedTestCase.tags.length > 0 && (
-              <div className="mb-4">
-                <span className="text-sm text-gray-400">Tags: </span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedTestCase.tags.map((tag, index) => (
-                    <span key={index} className="text-xs bg-gray-700 px-2 py-1 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Test case content */}
-            <div className="flex-1 overflow-y-auto bg-gray-800 border border-gray-700 p-4 rounded-lg mb-4">
-              <div className="prose prose-invert prose-sm max-w-none">
-                <ReactMarkdown components={{ code: CodeBlock }}>
-                  {selectedTestCase.content}
-                </ReactMarkdown>
-              </div>
-            </div>
-
-            {/* History accordion */}
-            <div className="border border-gray-700 rounded-lg overflow-hidden">
-              <details className="group">
-                <summary className="flex justify-between items-center p-3 font-medium cursor-pointer list-none bg-gray-800 hover:bg-gray-700">
-                  <span>History ({selectedTestCase.history.length} versions)</span>
-                  <span className="transition group-open:rotate-180">
-                    <svg fill="none" height="24" shape-rendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                  </span>
-                </summary>
-                <div className="bg-gray-800 border-t border-gray-700 p-3 max-h-60 overflow-y-auto">
-                  {selectedTestCase.history.length === 0 ? (
-                    <p className="text-gray-400 text-sm">No history available</p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {selectedTestCase.history.map((item, index) => (
-                        <li key={index} className="text-sm border-b border-gray-700 pb-2">
-                          <div className="flex justify-between mb-1">
-                            <span className="text-gray-400">
-                              Version {selectedTestCase.history.length - index}
-                            </span>
-                            <span className="text-gray-500">
-                              {new Date(item.updatedAt).toLocaleString()} by {item.updatedBy}
-                            </span>
-                          </div>
-                          <div className="bg-gray-900 p-2 rounded-lg max-h-28 overflow-y-auto">
-                            <pre className="whitespace-pre-wrap text-xs">{item.content}</pre>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </details>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <p className="mb-4">Select a test case from the list or create a new one</p>
-              <button
-                onClick={startNew}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
-              >
-                Create New Test Case
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && testCaseToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
-            {deleteSuccess ? (
-              <div className="text-center">
-                <div className="text-green-400 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Test Case Deleted</h3>
-                <p className="text-gray-400 mb-4">The test case has been successfully deleted.</p>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-semibold mb-4">Confirm Deletion</h3>
-                <p className="mb-6">
-                  Are you sure you want to delete the test case "{testCaseToDelete.title}"? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                  <button
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-                    onClick={() => {
-                      setShowDeleteModal(false);
-                      setTestCaseToDelete(null);
-                    }}
-                    disabled={deleteInProgress}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className={`px-4 py-2 bg-red-600 hover:bg-red-700 rounded flex items-center gap-2 ${
-                      deleteInProgress ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    onClick={deleteTestCase}
-                    disabled={deleteInProgress}
-                  >
-                    {deleteInProgress ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Deleting...
-                      </>
-                    ) : (
-                      'Delete'
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
     </div>
+  );
+};
+
+const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <>
+      <tr className={`border-b border-gray-700 ${expanded ? 'bg-gray-900/70' : ''}`}>
+        <td className="px-3 py-2 text-sm text-gray-400">{index + 1}</td>
+        <td className="px-3 py-2 text-sm font-medium text-white">{testCase.title || <span className="italic text-gray-500">Untitled</span>}</td>
+        <td className="px-3 py-2">
+          <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${getPriorityColor(testCase.priority)}`}>
+            {testCase.priority || '—'}
+          </span>
+        </td>
+        <td className="px-3 py-2">
+          <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${getSeverityColor(testCase.severity)}`}>
+            {testCase.severity || '—'}
+          </span>
+        </td>
+        <td className="px-3 py-2">
+          {testCase.tags && testCase.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {testCase.tags.map((tag, i) => (
+                <span key={i} className="bg-gray-700 text-xs px-2 py-0.5 rounded">{tag}</span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-gray-500 text-xs">—</span>
+          )}
+        </td>
+        <td className="px-3 py-2 text-xs text-gray-300">{testCase.format || '—'}</td>
+        <td className="px-3 py-2">
+          <button
+            className="text-blue-400 hover:text-blue-300 text-xs underline"
+            onClick={() => setExpanded(e => !e)}
+          >
+            {expanded ? 'Hide' : 'Show'}
+          </button>
+        </td>
+        <td className="px-3 py-2 flex gap-2">
+          <button
+            className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs text-white"
+            onClick={() => onEdit(testCase)}
+          >
+            Edit
+          </button>
+          <button
+            className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs text-white"
+            onClick={() => onDelete(testCase._id)}
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={8} className="bg-gray-900/80 px-6 py-4 border-b border-gray-800">
+            <div className="prose prose-invert max-w-none text-sm">
+              <ReactMarkdown components={{ code: CodeBlock }}>
+                {testCase.content || '_No details available_'}
+              </ReactMarkdown>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 };
 
