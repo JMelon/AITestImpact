@@ -1,91 +1,27 @@
 const mongoose = require('mongoose');
 
 const TestCaseSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  content: {
-    type: String,
-    required: true
-  },
-  // Add structured data fields
-  structuredData: {
-    format: String,
-    testId: String,
-    objective: String,
-    feature: String,
-    featureDescription: String,
-    scenarioType: String,
-    background: String,
-    preconditions: [String],
-    steps: [{
-      number: Number,
-      description: String,
-      expectedResult: String
-    }],
-    givenSteps: [String],
-    whenSteps: [String],
-    thenSteps: [String],
-    examples: String,
-    postconditions: [String]
-  },
-  format: {
-    type: String,
-    enum: ['Procedural', 'Gherkin'],
-    default: 'Procedural'
-  },
-  priority: {
-    type: String,
-    enum: ['P0-Critical', 'P1-High', 'P2-Medium', 'P3-Low'],
-    default: 'P2-Medium'
-  },
-  severity: {
-    type: String,
-    enum: ['Blocker', 'Critical', 'Major', 'Minor'],
-    default: 'Major'
-  },
-  category: {
-    type: String,
-    enum: ['UI', 'API', 'Integration', 'Performance', 'Security', 'Other'],
-    default: 'UI'
-  },
-  tags: [String],
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  format: { type: String, default: 'Procedural' },
+  priority: { type: String, default: 'P2-Medium' },
+  severity: { type: String, default: 'Major' },
+  category: { type: String, default: 'Other' },
+  tags: { type: [String], default: [] },
   state: {
     type: String,
-    enum: ['Draft', 'Review', 'Approved', 'Obsolete'],
+    enum: ['Draft', 'Ready', 'In Progress', 'Pass', 'Fail', 'Blocked'],
     default: 'Draft'
   },
-  result: {
-    type: String,
-    enum: ['Not Run', 'Pass', 'Fail', 'Blocked'],
-    default: 'Not Run'
-  },
+  result: { type: String, default: '' },
+  structuredData: { type: Object, default: {} },
   history: [{
     content: String,
-    updatedAt: {
-      type: Date,
-      default: Date.now
-    },
-    updatedBy: String
+    updatedBy: String,
+    timestamp: { type: Date, default: Date.now }
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
-
-// Add indexes for commonly queried fields
-TestCaseSchema.index({ title: 'text' }); // Text index for search functionality
-TestCaseSchema.index({ state: 1 }); // For filtering by state
-TestCaseSchema.index({ priority: 1 }); // For filtering by priority
-TestCaseSchema.index({ category: 1 }); // For filtering by category
-TestCaseSchema.index({ tags: 1 }); // For filtering by tags
-TestCaseSchema.index({ updatedAt: -1 }); // For sorting by date (newest first)
 
 module.exports = mongoose.model('TestCase', TestCaseSchema);

@@ -74,7 +74,7 @@ const TestCaseManager = () => {
       severity: tc.severity || 'Major',
       format: tc.format || 'Procedural',
       tags: tc.tags ? tc.tags.join(', ') : '',
-      state: tc.state || 'Draft'
+      state: tc.state || 'Draft',
     });
   };
 

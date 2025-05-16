@@ -112,26 +112,27 @@ router.put('/:id', async (req, res) => {
     if (!testCase) {
       return res.status(404).json({ error: 'Test case not found' });
     }
-    
-    // Add to history if content changed
-    if (content !== testCase.content) {
-      testCase.history.push({
-        content: testCase.content,
-        updatedBy: 'User'
-      });
+
+    // Allow empty string or falsy values for state and result (do not fallback to old value if explicitly set)
+    if (typeof title !== 'undefined') testCase.title = title;
+    if (typeof content !== 'undefined') {
+      if (content !== testCase.content) {
+        testCase.history.push({
+          content: testCase.content,
+          updatedBy: 'User'
+        });
+      }
+      testCase.content = content;
     }
-    
-    testCase.title = title || testCase.title;
-    testCase.content = content || testCase.content;
-    testCase.format = format || testCase.format;
-    testCase.priority = priority || testCase.priority;
-    testCase.severity = severity || testCase.severity;
-    testCase.category = category || testCase.category;
-    testCase.tags = tags || testCase.tags;
-    testCase.state = state || testCase.state;
-    testCase.result = result || testCase.result;
+    if (typeof format !== 'undefined') testCase.format = format;
+    if (typeof priority !== 'undefined') testCase.priority = priority;
+    if (typeof severity !== 'undefined') testCase.severity = severity;
+    if (typeof category !== 'undefined') testCase.category = category;
+    if (typeof tags !== 'undefined') testCase.tags = tags;
+    if (typeof state !== 'undefined') testCase.state = state;
+    if (typeof result !== 'undefined') testCase.result = result;
     testCase.updatedAt = Date.now();
-    
+
     const updatedTestCase = await testCase.save();
     res.json(updatedTestCase);
   } catch (err) {
