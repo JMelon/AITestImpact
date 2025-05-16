@@ -9,795 +9,791 @@ const Documentation = () => {
   const topics = [
     { id: 'overview', name: 'Overview' },
     { id: 'getting-started', name: 'Getting Started' },
+    { id: 'security-disclaimer', name: 'Security Disclaimer' },
     { id: 'test-generator', name: 'Test Case Generator' },
     { id: 'coverage-analyzer', name: 'Coverage Analyzer' },
     { id: 'test-code-generator', name: 'Test Code Generator' },
     { id: 'requirement-review', name: 'Requirement Review' },
     { id: 'test-management', name: 'Test Case Management' },
     { id: 'api-reference', name: 'API Reference' },
-    { id: 'advanced-usage', name: 'Advanced Usage' },
+    { id: 'for-developers', name: 'For Developers' },
     { id: 'faq', name: 'FAQ' }
   ];
-
-  const content = {
+  
+  // Filter topics based on search query
+  const filteredTopics = topics.filter(topic => 
+    topic.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  // Documentation content for each topic
+  const topicContent = {
     'overview': `
-# AITestImpact - AI-Powered Testing Platform
+# AITestImpact Platform Overview
 
-AITestImpact is a comprehensive suite of testing tools designed to revolutionize the software testing process. By leveraging advanced AI capabilities, AITestImpact helps test engineers, QA professionals, and development teams create, analyze, and optimize test cases with unprecedented efficiency.
+AITestImpact is an AI-powered testing platform that helps you:
 
-## Core Features
+- Generate comprehensive test cases from requirements, UI designs, or API specifications
+- Analyze test coverage to identify gaps
+- Generate test automation code
+- Review requirements for quality issues
+- Manage and organize your test cases
 
-- **Test Case Generation** - Create comprehensive test cases from requirements, UI designs, or API specs
-- **Coverage Analysis** - Analyze test coverage against requirements to identify gaps
-- **Test Code Generation** - Convert test cases into executable automation code
-- **Requirement Review** - Identify issues, ambiguities, and edge cases in requirements
-- **Test Case Management** - Organize and track your test cases throughout the testing lifecycle
+## Security Warning
 
-## Key Benefits
+**IMPORTANT: This platform is a demonstration prototype and has NOT undergone security testing or hardening.**
 
-- 📈 **Increased Efficiency** - Generate test cases in minutes instead of hours
-- 🔍 **Enhanced Coverage** - AI identifies edge cases humans might miss
-- 🚀 **Faster Delivery** - Streamline testing processes for quicker feedback
-- 💪 **Higher Quality** - More thorough testing leads to higher quality software
+- No security audits or penetration testing have been performed
+- Standard security practices may not be implemented
+- Data validation and sanitization may be incomplete
+- Authentication and authorization are minimal
+- There is no encryption for data at rest or in transit
+- No secure coding practices have been systematically applied
 
-## Getting Started
+**Never use this application with sensitive, confidential, or regulated data.** The platform is designed for educational and demonstration purposes only. Use only dummy data or publicly available information when working with this tool.
 
-Visit the [Getting Started](#getting-started) guide to learn how to use AITestImpact for your testing needs.
+## Key Features
+
+- **AI-Powered Test Case Generation**: Create detailed test cases from various inputs
+- **Test Coverage Analysis**: Identify gaps in your test suite
+- **Test Code Generation**: Generate test automation code from test cases
+- **Requirement Review**: Analyze requirements for issues and improvements
+- **Test Case Management**: Organize and track your test cases
     `,
+    
     'getting-started': `
 # Getting Started with AITestImpact
 
-This guide will help you get up and running with AITestImpact quickly.
+## Prerequisites
 
-## Quick Start
+- A modern web browser (Chrome, Firefox, Edge, Safari)
+- An OpenAI API key with access to GPT-4 or newer models
 
-1. **Select a Tool**: Choose the appropriate tool from the navigation bar based on your current needs
-2. **Provide Input**: Enter requirements, upload screenshots, or connect to your API documentation
-3. **Configure Options**: Adjust settings as needed for your specific testing context
-4. **Generate Results**: Click the generate/analyze button to produce outputs
-5. **Review and Refine**: Review the results and refine if necessary
-6. **Save or Export**: Save results to the test case manager or export as needed
+## Security Disclaimer
 
-## Tool Selection Guide
+**This application has NOT undergone security testing.** There are no explicit security measures implemented in this platform. It was built for demonstration purposes only and lacks standard security validations and protections.
 
-Choose the right tool based on your current phase in the testing process:
+Your data is primarily sent to the OpenAI API for processing, but we cannot guarantee the security of data in transit or at rest. The application may have security vulnerabilities that have not been identified or addressed.
 
-- **Test Case Generator** - When you need to create test cases from requirements or designs
-- **Coverage Analyzer** - When you want to evaluate if your test cases adequately cover requirements
-- **Test Code Generator** - When you need to create automated test scripts from test cases
-- **Requirement Review** - When you want to analyze requirements before creating test cases
-- **Test Case Manager** - When you need to organize and track your existing test cases
+**By using this application, you acknowledge these risks and agree to:**
+- Not use the platform with sensitive, confidential, or regulated data
+- Not upload proprietary code or requirements that contain sensitive information
+- Use only in isolated test environments, not in production environments
+- Assume that data entered may potentially be exposed or compromised
 
-## Example Workflow
+## Configuration
 
-Here's a typical workflow using AITestImpact:
+1. **Set up your API Key**: 
+   - Click on the Settings icon in the top-right corner
+   - Enter your OpenAI API key
+   - Select your preferred AI model
+   - Save your settings
 
-1. Start with **Requirement Review** to analyze requirements for potential issues
-2. Use **Test Case Generator** to create comprehensive test cases
-3. Check coverage with **Coverage Analyzer** to identify any gaps
-4. Generate automated tests with **Test Code Generator**
-5. Organize everything in **Test Case Manager**
+2. **Choose Your Starting Point**:
+   - For test case generation, click "Test Gen" in the navigation bar
+   - For test coverage analysis, click "Coverage"
+   - For test code generation, click "Code Gen"
+   - For requirement review, click "Req Review"
+   - For test case management, click "Tests"
 
 ## Tips for Best Results
 
-- Provide detailed requirements for better test case generation
-- Use refinement iterations to improve initial test cases
-- Select appropriate test priorities and severities for your context
-- Regularly analyze coverage to ensure comprehensive testing
-- Save generated test cases to build your test library over time
+- Be specific and detailed in your requirements or acceptance criteria
+- For UI-based testing, provide clear screenshots showing the interface
+- For API testing, use complete Swagger/OpenAPI specifications
+- Review and refine AI-generated content before using in production
     `,
+
+    'security-disclaimer': `
+# Security Disclaimer
+
+## ⚠️ Important Security Information ⚠️
+
+**This application is NOT secure and should be treated as such.**
+
+### Specific Security Limitations
+
+- **No Security Testing**: This application has not undergone any security audits, penetration testing, or vulnerability scanning.
+- **No Secure Development Practices**: The application was not developed following secure coding guidelines or best practices.
+- **No Input Validation**: Limited validation of user inputs may leave the application vulnerable to injection attacks.
+- **No Authentication Security**: Authentication mechanisms are basic and not designed to protect against common attacks.
+- **No Data Protection**: Data is not encrypted at rest or in transit (beyond HTTPS).
+- **Third-Party Exposure**: All data sent to OpenAI may be subject to their data handling practices.
+- **No Compliance**: The platform does not meet requirements for GDPR, HIPAA, SOC2, or any other compliance frameworks.
+- **No Security Monitoring**: There are no security monitoring or intrusion detection systems in place.
+
+### What This Means For Users
+
+1. **DO NOT use this platform for:**
+   - Personal information (names, addresses, contact details)
+   - Business-sensitive information (strategies, unreleased products)
+   - Proprietary code or intellectual property
+   - Financial or healthcare information
+   - Any data subject to regulatory requirements
+
+2. **Only use test or dummy data** that has been specifically created for demonstration purposes.
+
+3. **No Guarantees**: The creators and maintainers make no guarantees about the security or confidentiality of any data processed by this application.
+
+### Recommended Precautions
+
+- Deploy only on isolated networks or local environments
+- Use only for educational purposes
+- Do not connect to production databases or systems
+- Do not expose the application to the public internet
+- Consider all data entered into the system as potentially compromised
+    `,
+    
     'test-generator': `
 # Test Case Generator
 
-The Test Case Generator creates comprehensive test cases from various input sources, including text requirements, UI screenshots, and API specifications.
+The Test Case Generator creates comprehensive test cases from:
+- Text requirements or acceptance criteria
+- UI screenshots
+- Swagger/OpenAPI specifications
 
-## Features
+## Security Notice
 
-- Generate test cases from acceptance criteria or user stories
-- Create test cases from UI/UX screenshots or mockups
-- Produce test cases from Swagger/OpenAPI specifications
-- Support for both procedural and Gherkin (BDD) formats
-- Multiple refinement iterations for optimized results
-- Configure priority, severity, and test coverage focus
+**Remember that all data submitted through this form is processed by the OpenAI API** and this application has not undergone security testing. Do not enter sensitive or proprietary information.
 
 ## Input Types
 
 ### Text Input
 
-Use plain text requirements or acceptance criteria to generate test cases. This works well for:
-- User stories
-- Feature specifications
-- Acceptance criteria
-- Functional requirements
+1. Select the "Text Input" tab
+2. Enter your requirements or acceptance criteria in the text area
+3. Configure the advanced settings if needed
+4. Click "Generate Test Cases"
 
 ### Image Input
 
-Upload screenshots or UI mockups to generate UI-focused test cases. This works well for:
-- Website or application interfaces
-- Mobile app designs
-- Design specifications
-- Workflow diagrams
+1. Select the "Image Input" tab
+2. Upload UI screenshots using drag-and-drop or the file selector
+3. Configure the advanced settings if needed
+4. Click "Generate Test Cases"
 
 ### Swagger API
 
-Provide a Swagger/OpenAPI URL to generate API test cases. This works well for:
-- RESTful APIs
-- Backend services
-- Microservices
-- Integration testing
-
-## Output Formats
-
-### Procedural Format
-
-Traditional test cases with:
-- Test case ID
-- Title
-- Objective
-- Preconditions
-- Steps with expected results
-- Postconditions
-
-### Gherkin Format
-
-BDD-style scenarios with:
-- Feature description
-- Scenario title
-- Given-When-Then steps
-- Examples tables (for scenario outlines)
+1. Select the "Swagger API" tab
+2. Enter the URL to your Swagger/OpenAPI JSON specification
+3. Configure the advanced settings if needed
+4. Click "Generate Test Cases"
 
 ## Advanced Configuration
 
-- **Priority**: Set the importance level (P0-Critical to P3-Low)
-- **Severity**: Determine the impact of issues (Blocker to Minor)
-- **Test Type**: Specify the type of testing (Functional, Performance, etc.)
-- **Test Coverage**: Define the scope (Happy paths, Edge cases, etc.)
-- **Refinement Iterations**: Number of passes to improve test cases (1-5)
+- **Output Format**: Choose between Procedural and Gherkin formats
+- **Language**: Select the language for your test cases
+- **Priority**: Set the priority level (P0-Critical to P3-Low)
+- **Severity**: Set the severity level (Blocker to Minor)
+- **Test Type**: Choose the type of testing (Functional, Performance, etc.)
+- **Test Coverage**: Specify the coverage scope (Happy paths, Edge cases, etc.)
+- **Refinement Iterations**: Number of times to refine the generated test cases (1-5)
 
-## Usage Tips
+## Working with Generated Test Cases
 
-- Be specific in your requirements for better test cases
-- Use refinement iterations for more comprehensive test cases
-- For UI testing, provide clear screenshots that show the entire interface
-- For API testing, ensure your Swagger documentation is complete
-- After generating, analyze coverage to identify any gaps
+- Use the "Save to Library" button to save test cases to your library
+- Use the "Use in Code Generator" button to generate automation code
+- Use the "Analyze Coverage" button to analyze test coverage
+- Expand individual test cases to see details and generate specific code
     `,
+    
     'coverage-analyzer': `
-# Coverage Analyzer
+# Test Coverage Analyzer
 
-The Coverage Analyzer evaluates if your test cases provide adequate coverage for a set of requirements or specifications.
+The Coverage Analyzer helps you identify gaps in your test coverage by comparing your test cases against requirements.
+
+## Security Notice
+
+**This tool processes your test cases and requirements through AI models.** Do not use with sensitive or proprietary information as there are no security safeguards in place.
 
 ## Features
 
-- Analyze test coverage against textual requirements
-- Evaluate test coverage for UI mockups or screenshots
-- Assess API test coverage against Swagger/OpenAPI specifications
-- Calculate coverage score and identify gaps
-- Provide recommendations for additional test cases
-- Generate detailed coverage reports
+- Analyze test cases against requirements or acceptance criteria
+- Calculate coverage score and identify missing areas
+- Generate test cases for the missing areas
 
-## Coverage Analysis Process
+## How to Use
 
-1. **Input Requirements**: Provide requirements via text, images, or Swagger URL
-2. **Input Test Cases**: Provide your existing test cases (any format)
-3. **Analysis**: The system analyzes how well the test cases cover the requirements
-4. **Results**: Review coverage score, missing areas, and recommendations
+1. Choose the input type for your requirements (Text, Image, or Swagger)
+2. Enter your requirements or upload images
+3. Enter your existing test cases
+4. Click "Analyze Test Coverage"
 
-## Coverage Score Levels
+## Understanding the Results
 
-- **90%+ Coverage**: Excellent - Comprehensive test coverage
-- **75-89% Coverage**: Good - Most requirements covered
-- **50-74% Coverage**: Moderate - Significant gaps exist
-- **<50% Coverage**: Poor - Insufficient test coverage
+The analysis results include:
 
-## Missing Areas Analysis
+- **Coverage Score**: Percentage of requirements covered by the test cases
+- **Missing Areas**: Parts of the requirements not covered by test cases
+- **Coverage Details**: Specific requirements and their coverage status
+- **Suggestions**: Recommendations for improving test coverage
 
-The analyzer identifies specific requirements or functionality that aren't adequately covered by your test cases. These missing areas are categorized by importance:
+## Generating Tests for Missing Areas
 
-- **High Importance**: Critical functionality or requirements that must be tested
-- **Medium Importance**: Important functionality that should be tested
-- **Low Importance**: Nice-to-have testing that would improve coverage
-
-## Generating Additional Test Cases
-
-You can use the analyzer's recommendations to:
-
-1. Create additional test cases manually
-2. Use the Test Case Generator to create tests for missing areas
-3. Modify existing test cases to cover more scenarios
-
-## Best Practices
-
-- Aim for at least 80% coverage for critical features
-- Prioritize high importance missing areas
-- Regularly reassess coverage as requirements evolve
-- Use coverage analysis before finalizing your test plan
-- Consider all types of testing: functional, negative, edge cases
+If missing areas are found, you can click the "Generate Test Cases for Missing Areas" button to automatically create test cases for those areas.
     `,
+    
     'test-code-generator': `
 # Test Code Generator
 
-The Test Code Generator converts written test cases into executable test automation code across multiple frameworks and languages.
+The Test Code Generator converts test cases into executable automation code for various frameworks.
 
-## Features
+## Security Notice
 
-- Generate test code from test cases in any format
-- Support for multiple automation frameworks
-- Language-specific code generation
-- Setup and teardown code generation
-- Placeholders for dynamic elements
-- Code comments and documentation
+**The code generation features use AI to process your test cases.** There are no security measures in place to protect your data. Do not use with proprietary test cases or sensitive information.
 
 ## Supported Frameworks
 
-### UI Testing
-- Playwright
-- Selenium WebDriver
-- Cypress
-- Puppeteer
+- **Web Testing**: Selenium (Java, Python, C#, JavaScript)
+- **API Testing**: RestAssured, Postman, SuperTest
+- **Mobile Testing**: Appium
+- **BDD**: Cucumber with Java/JavaScript
 
-### API Testing
-- RestAssured
-- Postman
-- K6
-- SuperTest
+## How to Use
 
-### Mobile Testing
-- Appium
-- Detox
-- XCUITest
+1. Enter your test cases or load them from the Test Case Generator
+2. Select the desired automation framework
+3. Click "Generate Code"
+4. Review and customize the generated code
 
-### BDD
-- Cucumber
-- SpecFlow
-- Behave
+## Important Notes
 
-## Code Generation Process
-
-1. **Input Test Cases**: Paste your test case content
-2. **Select Framework**: Choose your preferred automation framework
-3. **Generate Code**: The system converts your test case to executable code
-4. **Customize**: Modify element selectors and other placeholders as needed
-
-## Example Input/Output
-
-### Input Test Case
-\`\`\`
-Test Case: Login with valid credentials
-1. Navigate to login page
-2. Enter valid username
-3. Enter valid password
-4. Click login button
-Expected: User is logged in and redirected to dashboard
-\`\`\`
-
-### Output Code (Playwright)
-\`\`\`javascript
-// Login with valid credentials
-test('Login with valid credentials', async ({ page }) => {
-  // Navigate to login page
-  await page.goto('https://example.com/login');
-  
-  // Enter valid username
-  await page.fill('#username', 'validUser');
-  
-  // Enter valid password
-  await page.fill('#password', 'validPassword');
-  
-  // Click login button
-  await page.click('#loginButton');
-  
-  // Verify user is logged in and redirected to dashboard
-  await expect(page).toHaveURL(/dashboard/);
-  await expect(page.locator('.welcome-message')).toBeVisible();
-});
-\`\`\`
-
-## Best Practices
-
-- Provide detailed steps in your test cases for better code generation
-- Include specific expected results for more precise assertions
-- Update element selectors based on your actual application
-- Add additional validation steps as needed
-- Consider data parameterization for data-driven tests
+- The generated code includes placeholder selectors that need to be replaced with actual element selectors
+- Review and modify the generated code to match your specific environment and requirements
+- Add proper assertions and validations based on your testing requirements
     `,
+    
     'requirement-review': `
 # Requirement Review
 
-The Requirement Review tool analyzes requirements for issues that could impact testing and implementation.
+The Requirement Review tool analyzes requirements for quality issues like ambiguities, contradictions, and missing details.
+
+## Security Notice
+
+**This tool sends your requirements to OpenAI for analysis.** No security measures are in place to protect your data. Do not submit proprietary or sensitive requirements.
 
 ## Features
 
 - Identify ambiguities and unclear specifications
 - Detect contradictions and inconsistencies
-- Highlight security concerns
-- Flag potential performance issues
-- Identify missing requirements and edge cases
-- Assess testability of requirements
-- Evaluate alignment with industry standards
+- Highlight missing requirements and edge cases
+- Find security vulnerabilities and concerns
+- Identify performance implications
+- Assess testability issues
+- Suggest improvements
 
-## Types of Issues Detected
+## How to Use
 
-### Ambiguities
-Vague or unclear language that could lead to misinterpretation:
-- "System should respond quickly"
-- "User-friendly interface"
-- "Adequate security measures"
+1. Enter your requirements in the text area
+2. Select the focus areas for analysis
+3. Click "Analyze Requirements"
+4. Review the findings and recommendations
 
-### Contradictions
-Conflicting requirements that cannot be simultaneously satisfied:
-- One requirement states data should be encrypted, another requires plain text storage
-- Conflict between performance requirements and security requirements
+## Understanding Results
 
-### Security Concerns
-Potential security vulnerabilities:
-- Lack of authentication requirements
-- Insecure data storage specifications
-- Missing access control requirements
+The analysis results include:
 
-### Performance Issues
-Potential performance bottlenecks:
-- Unrealistic response time expectations
-- Resource-intensive operations without optimization
-- Scaling concerns
-
-### Missing Requirements
-Common gaps in requirements:
-- Error handling not specified
-- Edge cases not addressed
-- Integration points not defined
-
-### Testability Issues
-Requirements that are difficult to verify:
-- Subjective criteria without measurable outcomes
-- Lack of acceptance criteria
-- Complex dependencies
-
-## Usage Process
-
-1. **Input Requirements**: Paste your requirements text
-2. **Review**: Click the review button to analyze requirements
-3. **Results**: Review findings, categorized by issue type
-4. **Improvement**: Use recommendations to improve requirements
-
-## Best Practices
-
-- Review requirements early in the development cycle
-- Address high-priority findings before implementation
-- Involve stakeholders in resolving ambiguities
-- Create acceptance criteria for vague requirements
-- Document assumptions for future reference
+- **Issues**: Problems found in the requirements
+- **Missing Elements**: Important aspects not covered in the requirements
+- **Recommendations**: Suggested improvements
+- **Testability Assessment**: Evaluation of how testable the requirements are
     `,
+    
     'test-management': `
 # Test Case Management
 
-The Test Case Manager helps you organize, track, and manage your test cases throughout the testing lifecycle.
+The Test Case Management tool helps you organize, track, and manage your test cases.
+
+## Security Notice
+
+**Test case data is stored in MongoDB without encryption.** There are no security measures to protect this data. Do not store sensitive or proprietary test cases.
 
 ## Features
 
-- Create and edit test cases
-- Organize test cases with tags and categories
-- Track test execution status
-- Filter and search test cases
+- View and organize all test cases
+- Filter by priority, severity, category, and tags
+- Track test case execution status
+- Update and edit test cases
 - View test case history
-- Bulk operations for efficient management
 
-## Test Case Properties
+## Test Case States
 
-- **Title**: Short, descriptive name
-- **Content**: Detailed test case steps and expected results
-- **Format**: Procedural or Gherkin
-- **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
-- **Severity**: Blocker, Critical, Major, Minor
-- **Category**: UI, API, Integration, Performance, Security, Other
-- **Tags**: Custom labels for organization
-- **State**: Draft, Review, Approved, Obsolete
-- **Result**: Not Run, Pass, Fail, Blocked
-- **History**: Version history of the test case
+- **Draft**: Initial state for newly created test cases
+- **Ready**: Test cases ready for execution
+- **In Progress**: Test cases currently being executed
+- **Pass**: Test cases that have passed execution
+- **Fail**: Test cases that have failed execution
+- **Blocked**: Test cases that cannot be executed due to blocking issues
 
-## Managing Test Cases
+## Working with Test Cases
 
-### Creating Test Cases
-- Create manually in the Test Case Manager
-- Import from Test Case Generator
-- Bulk import from external sources
-
-### Organizing Test Cases
-- Apply tags for custom categorization
-- Group by category, priority, or state
-- Create custom filters for frequent searches
-- Mark obsolete test cases
-
-### Tracking Execution
-- Update execution results (Pass, Fail, Blocked)
-- Add execution notes and issues
-- Track execution history
-- View execution statistics
-
-## Filtering and Searching
-
-- **Filter by State**: Draft, Review, Approved, Obsolete
-- **Filter by Result**: Not Run, Pass, Fail, Blocked
-- **Filter by Category**: UI, API, etc.
-- **Filter by Priority**: P0-Critical to P3-Low
-- **Search**: Find test cases by title, content, or tags
-
-## Best Practices
-
-- Use consistent naming conventions
-- Apply meaningful tags for easy filtering
-- Keep test cases up to date with requirement changes
-- Regularly clean up obsolete test cases
-- Document execution issues clearly
+- Click on a test case to view its details
+- Use the filter options to find specific test cases
+- Use the "Edit" button to modify a test case
+- Use the "Delete" button to remove a test case
+- Use the "Execute" button to update the execution status
     `,
+    
     'api-reference': `
 # API Reference
 
 AITestImpact provides a RESTful API for integration with other tools and systems.
 
+## Security Notice
+
+**The API endpoints have no authentication beyond the OpenAI API key.** There are no security measures in place to protect data sent to or received from these endpoints. Use only for demonstration purposes in isolated environments.
+
 ## Authentication
 
-All API requests require authentication with an API token:
+All API endpoints require an OpenAI API key for AI operations. Add the API key to the request headers:
 
 \`\`\`
-Authorization: Bearer your-api-token
+X-OpenAI-Token: your_api_key_here
 \`\`\`
 
-## Test Case Endpoints
+## Test Case Generation API
 
-### GET /api/test-cases
-Retrieve a list of test cases
+### Generate Test Cases
 
-Query parameters:
-- \`limit\`: Maximum number of results (default: 50)
-- \`offset\`: Pagination offset (default: 0)
-- \`state\`: Filter by state (Draft, Review, Approved, Obsolete)
-- \`category\`: Filter by category
-- \`priority\`: Filter by priority
-- \`result\`: Filter by result
+\`\`\`
+POST /api/generate-test-cases
+\`\`\`
 
-### GET /api/test-cases/:id
-Retrieve a specific test case by ID
+**Request Body:**
 
-### POST /api/test-cases
-Create a new test case
-
-Request body:
 \`\`\`json
 {
-  "title": "Test case title",
-  "content": "Test case content",
-  "format": "Procedural",
-  "priority": "P1-High",
-  "severity": "Major",
-  "category": "UI",
-  "tags": ["login", "security"],
-  "state": "Draft"
+  "acceptanceCriteria": "String",  // Required for text input
+  "imageDataArray": ["base64_images"],  // Required for image input
+  "swaggerUrl": "String",  // Required for Swagger input
+  "outputType": "Procedural|Gherkin",  // Required
+  "language": "String",  // Required
+  "priority": "String",  // Optional
+  "severity": "String",  // Optional
+  "testType": "String",  // Optional
+  "extendedOptions": "String"  // Optional
 }
 \`\`\`
 
-### PUT /api/test-cases/:id
-Update an existing test case
+**Response:**
 
-### DELETE /api/test-cases/:id
-Delete a test case
+JSON object containing the generated test cases.
 
-## Generation Endpoints
+### Analyze Test Coverage
 
-### POST /api/generate/test-cases
-Generate test cases from requirements
+\`\`\`
+POST /api/analyze-test-coverage
+\`\`\`
 
-Request body:
+**Request Body:**
+
 \`\`\`json
 {
-  "requirements": "Requirements text",
-  "outputType": "Procedural",
-  "refinementCount": 1,
-  "priority": "P2-Medium",
-  "testType": "Functional"
+  "testCases": "String",  // Required
+  "requirements": "String",  // Required for text input
+  "inputType": "text|image|swagger",  // Required
+  "imageDataArray": ["base64_images"]  // Required for image input
 }
 \`\`\`
 
-### POST /api/analyze/coverage
-Analyze test coverage
+**Response:**
 
-Request body:
+JSON object containing the coverage analysis.
+
+### Generate Test Code
+
+\`\`\`
+POST /api/generate-test-code
+\`\`\`
+
+**Request Body:**
+
 \`\`\`json
 {
-  "requirements": "Requirements text",
-  "testCases": "Test cases content"
+  "testCase": "String",  // Required
+  "framework": "String"  // Required
 }
 \`\`\`
 
-### POST /api/generate/code
-Generate test code from test cases
+**Response:**
 
-Request body:
-\`\`\`json
-{
-  "testCase": "Test case content",
-  "framework": "Playwright"
-}
-\`\`\`
-
-## Error Handling
-
-API responses use standard HTTP status codes:
-- 200: Success
-- 400: Bad Request
-- 401: Unauthorized
-- 404: Not Found
-- 500: Server Error
-
-Error response format:
-\`\`\`json
-{
-  "error": "Error message",
-  "details": "Additional error details"
-}
-\`\`\`
+JSON object containing the generated test code.
     `,
-    'advanced-usage': `
-# Advanced Usage
+    
+    'for-developers': `
+# Developer Documentation
 
-This section covers advanced features and techniques to maximize the value of AITestImpact.
+This section provides technical information for developers who want to contribute to the AITestImpact platform or run it locally for development purposes.
 
-## Advanced Test Generation
+## Security Notice
 
-### Multi-stage Generation
+**This application has NO security hardening.** Before contributing or deploying, be aware that:
 
-For complex features, break down requirements into smaller components and generate test cases for each component separately:
+- The codebase has not undergone security review
+- There are likely security vulnerabilities present
+- No secure coding practices were consistently applied
+- There is minimal input validation and sanitization
+- The application is designed for demonstration only
 
-1. Generate core functionality test cases
-2. Generate edge cases and error handling test cases
-3. Generate integration test cases
-4. Merge and refine the combined test suite
+## Technology Stack
 
-### Image Sequence Analysis
+AITestImpact is built using the following technologies:
 
-For multi-step workflows, upload a sequence of UI screenshots to generate comprehensive end-to-end test cases:
+### Frontend
+- **React**: JavaScript library for building user interfaces
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **Axios**: HTTP client for making API requests
+- **React Markdown**: For rendering markdown content
 
-1. Prepare screenshots of each step in the workflow
-2. Upload all screenshots in order
-3. The system will analyze the workflow progression
-4. Test cases will cover the entire user journey
+### Backend
+- **Node.js**: JavaScript runtime for the server
+- **Express**: Web framework for Node.js
+- **MongoDB**: NoSQL database for storing test cases
+- **Mongoose**: MongoDB object modeling for Node.js
+- **OpenAI API**: For AI-powered test generation and analysis
 
-### Custom Generation Templates
+### Development Tools
+- **Docker & Docker Compose**: For containerized development
+- **ESLint**: For code linting
+- **Nodemon**: For automatic server restarts during development
+- **Concurrently**: For running multiple commands concurrently
 
-Create custom test case templates for specific types of testing:
+## Prerequisites
 
-1. Define your template structure
-2. Add specific instructions in your requirements
-3. Use format directives like [SECURITY_FOCUSED] or [PERFORMANCE_FOCUSED]
+Before you start, make sure you have the following installed:
 
-## Integration Strategies
+- Node.js (v14 or later)
+- npm (v6 or later)
+- Docker and Docker Compose
+- Git
 
-### CI/CD Integration
+## Getting Started for Development
 
-Integrate AITestImpact into your CI/CD pipeline:
+### 1. Clone the Repository
 
-\`\`\`yaml
-# Example GitHub Actions workflow
-name: Test Generation
-
-on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'requirements/**'
-
-jobs:
-  generate-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Generate Test Cases
-        run: |
-          curl -X POST "https://api.testmatrix.com/api/generate/test-cases" \\
-            -H "Authorization: Bearer \${TESTMATRIX_API_KEY}" \\
-            -H "Content-Type: application/json" \\
-            -d @- << 'EOF'
-            {
-              "requirements": "$(cat requirements/new-feature.md)",
-              "outputType": "Gherkin"
-            }
-          EOF
-      # Additional steps to save generated tests
+\`\`\`bash
+git clone https://github.com/jmelon/AITestImpact.git
+cd AITestImpact
 \`\`\`
 
-### JIRA Integration
+### 2. Install Dependencies
 
-Connect AITestImpact to JIRA for requirements import and test case export:
+\`\`\`bash
+# Install server dependencies
+npm install
 
-1. Configure JIRA API credentials
-2. Import requirements directly from user stories
-3. Generate test cases automatically for new stories
-4. Export test cases back to JIRA as test issues
+# Install client dependencies
+cd client
+npm install
+cd ..
+\`\`\`
 
-## Advanced Analysis Techniques
+### 3. Configure Environment Variables
 
-### Requirement Classification
+Create a \`.env\` file in the root directory with the following content:
 
-Use the requirement analyzer to classify requirements by:
-- Risk level
-- Testability
-- Implementation complexity
-- Security sensitivity
+\`\`\`
+# Server Configuration
+PORT=5000
+NODE_ENV=development
 
-### Coverage Gap Analysis
+# MongoDB Configuration - using Docker Compose
+ENABLE_MONGODB=true
+MONGODB_URI=mongodb://{username}:{password}@localhost:27017/testcases?authSource=admin
 
-Perform targeted gap analysis:
-- Security coverage analysis
-- Performance test coverage analysis
-- Cross-browser/platform coverage analysis
+\`\`\`
 
-## Performance Optimization
+This simple configuration:
+- Sets the server port and environment
+- Enables MongoDB integration
+- Configures the MongoDB connection string to match the Docker Compose service name
+- Sets the default AI model
 
-### Batch Processing
+### 4. Set Up MongoDB with Docker Compose
 
-For large sets of requirements:
-1. Split requirements into logical batches
-2. Process batches in parallel
-3. Merge results into consolidated test suites
+The project already includes a fully configured \`docker-compose.yml\` file that defines a MongoDB service. You don't need to create or modify this file.
 
-### Refinement Tuning
+To start MongoDB using the existing Docker Compose configuration:
 
-Optimize refinement iteration count based on requirement type:
-- Critical features: 3-5 iterations
-- Standard features: 2-3 iterations
-- Minor features: 1 iteration
+\`\`\`bash
+# Navigate to the project root directory
+cd AITestImpact
+
+# Start MongoDB container
+docker-compose up -d mongo
+\`\`\`
+
+The MongoDB container will start with:
+- The service name 'mongo' (which matches the hostname in the MONGODB_URI)
+- Port 27017 exposed to your host machine
+- A persistent volume for data storage
+
+No additional MongoDB configuration is required - the application is pre-configured to work with this setup.
+
+### 5. Run the Application
+
+#### Using Docker Compose (Full Stack)
+
+\`\`\`bash
+# Start both MongoDB and the application
+docker-compose up -d
+\`\`\`
+
+#### Running Locally (Development Mode)
+
+\`\`\`bash
+# Run both server and client concurrently
+npm run dev
+
+# Or run them separately
+# Terminal 1 - Server
+npm run server
+
+# Terminal 2 - Client
+npm run client
+\`\`\`
+
+The server will run on http://localhost:5000 and the client on http://localhost:3000.
+
+## Project Structure
+
+\`\`\`
+AITestImpact/
+├── client/                 # React frontend
+│   ├── public/             # Static files
+│   ├── src/                # Source files
+│   │   ├── components/     # React components
+│   │   ├── context/        # React context providers
+│   │   ├── utils/          # Utility functions
+│   │   ├── App.js          # Main App component
+│   │   └── index.js        # Entry point
+│   └── package.json        # Client dependencies
+├── models/                 # MongoDB models
+├── routes/                 # Express routes
+├── scripts/                # Utility scripts
+├── .env                    # Environment variables
+├── docker-compose.yml      # Docker Compose configuration
+├── server.js               # Express server
+└── package.json            # Server dependencies
+\`\`\`
+
+## Key Files
+
+- **server.js**: Main Express server file that handles API routes
+- **client/src/App.js**: Main React component that handles routing
+- **client/src/components/**: Contains all React components
+- **models/TestCase.js**: MongoDB schema for test cases
+- **routes/testCases.js**: API routes for test case operations
+- **docker-compose.yml**: Docker Compose configuration for MongoDB
+
+## Database Schema
+
+The application uses the following MongoDB collections:
+
+### Test Cases Collection
+
+\`\`\`javascript
+{
+  title: String,           // Title of the test case
+  content: String,         // Content/description of the test case
+  format: String,          // Format (Procedural or Gherkin)
+  priority: String,        // Priority level (P0-Critical, P1-High, etc.)
+  severity: String,        // Severity (Blocker, Critical, Major, Minor)
+  category: String,        // Category (API, UI, Functional, Performance, etc.)
+  tags: [String],          // Array of tags
+  state: String,           // State (Draft, Ready, In Progress, Pass, Fail, Blocked)
+  result: String,          // Test result (Pass, Fail, Not Run)
+  structuredData: Object,  // Structured representation of the test case
+  history: [{              // Version history
+    content: String,       // Previous content
+    updatedBy: String,     // Who updated it
+    timestamp: Date        // When it was updated
+  }],
+  createdAt: Date,         // Creation timestamp
+  updatedAt: Date          // Last update timestamp
+}
+\`\`\`
+
+## Troubleshooting Common Issues
+
+### MongoDB Connection Issues
+
+If you're having trouble connecting to MongoDB:
+
+1. Ensure Docker is running
+2. Check that the MongoDB container is up: \`docker ps | grep mongo\`
+3. Docker logs might show issues: \`docker logs <mongo-container-id>\`
+4. Verify the connection string in your .env file
+5. Try connecting with MongoDB Compass to verify the server is accessible
+
+### OpenAI API Issues
+
+OpenAI API errors are typically due to:
+
+1. Invalid or missing API key - Set in the Settings page
+2. Rate limiting - Reduce request frequency
+3. Model availability - Make sure you're using a valid model
+
+### Client-Server Communication
+
+If the client can't communicate with the server:
+
+1. Ensure the server is running on port 5000
+2. Check for CORS issues
+3. Verify that proxy settings in \`client/package.json\` are correct
+
+## Development Guidelines
+
+1. **No Sensitive Data**: Never commit API keys, credentials, or sensitive data
+2. **Testing**: Test thoroughly before submitting PRs
+3. **Responsive Design**: Ensure UI works on different screen sizes
+4. **Error Handling**: Add proper error handling for all API calls
+5. **Comments**: Comment complex code sections
     `,
+    
     'faq': `
 # Frequently Asked Questions
 
 ## General Questions
 
-### What is AITestImpact?
-AITestImpact is an AI-powered testing platform that helps teams create, manage, and optimize test cases using advanced language models. It streamlines the entire testing process from requirements analysis to test case creation and automation.
+### Q: Is my data secure?
+**A:** **NO. This application has NOT undergone any security testing.** There are no explicit security measures implemented in this platform. It was built for demonstration purposes only and lacks standard security validations and protections.
 
-### How does AITestImpact use AI?
-AITestImpact uses large language models to analyze requirements, generate test cases, evaluate test coverage, review requirements, and generate test automation code. The AI is trained on testing best practices and can understand complex software requirements.
+While your data is primarily sent to the OpenAI API for processing, we cannot guarantee the security of data in transit or at rest. The application may have security vulnerabilities that have not been identified or addressed.
 
-### Is my data secure?
-Yes, all data is processed securely. We do not store your requirements or test cases beyond the time needed to process your requests unless you explicitly save them to the Test Case Manager. All API calls use encryption and authentication.
+**Important security warnings:**
+- Do not use this platform with sensitive, confidential, or regulated data
+- Do not upload proprietary code or requirements that contain sensitive information
+- Use only in isolated test environments, not in production environments
+- Assume that data entered may potentially be exposed or compromised
 
-### Do I need an OpenAI API key?
-Yes, currently you need to provide your own OpenAI API key to use AITestImpact. This allows you to maintain control over your API usage and costs.
+If you need a secure testing platform for professional use, please use properly vetted commercial solutions.
 
-## Test Case Generation
+### Q: Do I need an internet connection?
+**A:** Yes, an internet connection is required to use the AI features, as they rely on the OpenAI API.
 
-### What types of requirements can I use to generate test cases?
-You can generate test cases from:
-- Written requirements or acceptance criteria
-- UI screenshots or mockups
-- Swagger/OpenAPI specifications
+### Q: Which AI models are supported?
+**A:** The platform supports GPT-4 and newer OpenAI models. For best results, we recommend using GPT-4o or GPT-4 Turbo.
 
-### How many test cases can AITestImpact generate at once?
-There's no hard limit, but the quality and comprehensiveness depend on the complexity of your requirements. Processing very large requirements might be better done in logical batches.
+## Technical Questions
 
-### What's the difference between Procedural and Gherkin formats?
-- **Procedural**: Traditional step-by-step test cases with preconditions, steps, and expected results
-- **Gherkin**: BDD-style scenarios using Given-When-Then format, ideal for behavior-driven development
+### Q: Why are my test cases not generating?
+**A:** This could be due to:
+- Invalid or expired OpenAI API key
+- Network issues
+- Input that's too large or complex
+- Rate limiting by OpenAI
 
-### How do I get the best results from the Test Case Generator?
-- Provide clear, specific requirements
-- Use refinement iterations for more comprehensive coverage
-- Specify the appropriate test type and coverage focus
-- Review and adapt generated test cases to your specific context
+### Q: How can I improve the quality of generated test cases?
+**A:** Try:
+- Providing more detailed requirements
+- Increasing the refinement iterations
+- Using multiple screenshots for UI-based testing
+- Selecting specific test types and coverage options
 
-## Coverage Analysis
+### Q: Can I use the platform offline?
+**A:** No, the platform requires an internet connection to access the OpenAI API.
 
-### How accurate is the coverage analysis?
-The coverage analysis provides a good approximation of how well your test cases cover requirements. It's particularly effective at identifying missing scenarios and edge cases that humans might overlook.
-
-### What if my coverage score is low?
-A low coverage score indicates gaps in your test suite. You can:
-1. Review the missing areas identified in the analysis
-2. Generate additional test cases specifically for those areas
-3. Refine existing test cases to cover more scenarios
-4. Re-analyze after making improvements
-
-## Test Code Generation
-
-### What languages and frameworks are supported?
-Currently, we support code generation for:
-- JavaScript/TypeScript (Playwright, Cypress, Puppeteer)
-- Java (Selenium, RestAssured)
-- Python (Pytest, Selenium)
-- C# (NUnit, SpecFlow)
-
-### Do I need to modify the generated code?
-While the generated code provides a solid foundation, you'll typically need to:
-- Update element selectors for your specific application
-- Adjust test data for your environment
-- Add application-specific validation
-- Handle authentication and configuration
-
-## Technical Issues
-
-### What should I do if I encounter an error?
-Most errors are due to:
-1. Invalid or expired API keys
-2. Input that's too large or complex
-3. Network issues
-
-Try:
-- Verifying your API key
-- Breaking your input into smaller chunks
-- Checking your network connection
-- Contacting support if issues persist
-
-### How can I report bugs or request features?
-Please use our GitHub repository issue tracker or contact our support team directly.
+### Q: What if I find an error in the generated tests?
+**A:** You can:
+- Edit the test case directly
+- Regenerate with more specific requirements
+- Use the refinement feature to improve the test cases
     `
   };
-
-  // Filter topics based on search query
-  const filteredTopics = topics.filter(topic => 
-    topic.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  
+  // Handle topic change
+  const handleTopicChange = (topicId) => {
+    setActiveTopic(topicId);
+  };
+  
+  // Handle search
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+  
   return (
     <div className="flex flex-col md:flex-row gap-6">
-      {/* Left sidebar with topics */}
-      <div className="w-full md:w-64 lg:w-72 bg-slate-900 rounded-xl p-6 shadow-lg h-fit">
+      {/* Sidebar */}
+      <div className="w-full md:w-1/4 bg-gray-900 rounded-xl p-6">
+        <h3 className="text-xl font-semibold mb-4">Documentation</h3>
+        
+        {/* Search input */}
         <div className="mb-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search documentation..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
+          <input
+            type="text"
+            placeholder="Search topics..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="w-full bg-gray-800 border border-gray-700 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+          />
         </div>
         
-        <nav>
-          <ul className="space-y-1">
-            {filteredTopics.map(topic => (
-              <li key={topic.id}>
-                <button
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeTopic === topic.id
-                      ? 'bg-purple-700/30 text-purple-300 border border-purple-700/50'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                  onClick={() => setActiveTopic(topic.id)}
-                >
-                  {topic.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* Topic list */}
+        <div className="space-y-1">
+          {filteredTopics.map((topic) => (
+            <button
+              key={topic.id}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTopic === topic.id
+                  ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+              onClick={() => handleTopicChange(topic.id)}
+            >
+              {topic.name}
+              {topic.id === 'security-disclaimer' && (
+                <span className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 rounded-full text-xs font-bold">!</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Main content area */}
-      <div className="w-full md:flex-1 bg-slate-900 rounded-xl p-6 shadow-lg overflow-auto max-h-[800px]">
-        <div className="prose prose-invert prose-headings:scroll-mt-20 prose-pre:bg-slate-800 prose-pre:border prose-pre:border-slate-700 max-w-none">
+      
+      {/* Content */}
+      <div className="w-full md:w-3/4 bg-gray-900 rounded-xl p-6">
+        {activeTopic === 'security-disclaimer' && (
+          <div className="mb-4 bg-red-900/30 border border-red-800 rounded-lg p-4">
+            <div className="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400 mr-3 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-red-300">
+                <strong>Critical Notice:</strong> This application has NOT been security tested and is NOT suitable for processing sensitive data. Read the full disclaimer below.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        <div className="prose prose-invert max-w-none">
           <ReactMarkdown
             components={{
               code: CodeBlock,
-              // Add custom styling for other elements
-              h1: ({ node, children, ...props }) => <h1 className="text-2xl font-bold mb-6 text-white" {...props}>{children}</h1>,
-              h2: ({ node, children, ...props }) => <h2 className="text-xl font-bold mt-8 mb-4 text-white border-b border-slate-800 pb-2" {...props}>{children}</h2>,
-              h3: ({ node, children, ...props }) => <h3 className="text-lg font-bold mt-6 mb-3 text-white" {...props}>{children}</h3>,
-              ul: ({ node, ...props }) => <ul className="my-4 space-y-1" {...props} />,
-              ol: ({ node, ...props }) => <ol className="my-4 space-y-1" {...props} />,
-              li: ({ node, ...props }) => <li className="ml-4" {...props} />,
-              table: ({ node, ...props }) => <div className="overflow-x-auto my-6"><table className="border-collapse w-full" {...props} /></div>,
-              thead: ({ node, ...props }) => <thead className="bg-slate-800" {...props} />,
-              th: ({ node, ...props }) => <th className="border border-slate-700 px-4 py-2 text-left" {...props} />,
-              td: ({ node, ...props }) => <td className="border border-slate-700 px-4 py-2" {...props} />
+              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 mt-0 text-white" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-6 mb-3 text-white" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-lg font-medium mt-5 mb-2 text-white" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-1" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-1" {...props} />,
+              li: ({node, ...props}) => <li className="text-gray-300" {...props} />,
+              p: ({node, ...props}) => <p className="mb-4 text-gray-300" {...props} />,
+              a: ({node, ...props}) => <a className="text-blue-400 hover:text-blue-300" {...props} />,
+              blockquote: ({node, ...props}) => (
+                <blockquote className="border-l-4 border-gray-700 pl-4 py-2 mb-4 text-gray-400" {...props} />
+              ),
+              table: ({node, ...props}) => (
+                <div className="overflow-x-auto mb-4">
+                  <table className="min-w-full bg-gray-800 border border-gray-700 rounded-lg" {...props} />
+                </div>
+              ),
+              thead: ({node, ...props}) => <thead className="bg-gray-700" {...props} />,
+              tbody: ({node, ...props}) => <tbody className="divide-y divide-gray-700" {...props} />,
+              tr: ({node, ...props}) => <tr className="hover:bg-gray-700/50" {...props} />,
+              th: ({node, ...props}) => (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" {...props} />
+              ),
+              td: ({node, ...props}) => <td className="px-4 py-3 text-sm text-gray-300" {...props} />
             }}
           >
-            {content[activeTopic]}
+            {topicContent[activeTopic] || 'Documentation content not found.'}
           </ReactMarkdown>
         </div>
       </div>
