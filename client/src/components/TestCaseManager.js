@@ -30,6 +30,7 @@ const TestCaseManager = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [bulkAction, setBulkAction] = useState('');
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   // Fetch test cases on mount
   useEffect(() => {
@@ -246,41 +247,60 @@ const TestCaseManager = () => {
         </div>
       </div>
 
-      {/* Bulk actions bar */}
-      <div className="flex flex-wrap items-center gap-3 mb-2">
-        <input
-          type="checkbox"
-          checked={selectAll}
-          onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
-          className="mr-2"
-          aria-label="Select all on page"
-        />
-        <span className="text-xs text-gray-400 mr-2">Select All</span>
-        <select
-          value={bulkAction}
-          onChange={e => setBulkAction(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
-        >
-          <option value="">Bulk Actions</option>
-          <option value="delete">Delete Selected</option>
-          <option value="set-status-Draft">Set Status: Draft</option>
-          <option value="set-status-Ready">Set Status: Ready</option>
-          <option value="set-status-In Progress">Set Status: In Progress</option>
-          <option value="set-status-Pass">Set Status: Pass</option>
-          <option value="set-status-Fail">Set Status: Fail</option>
-          <option value="set-status-Blocked">Set Status: Blocked</option>
-        </select>
+      {/* Bulk actions reveal button */}
+      <div className="flex items-center gap-2 mb-2">
         <button
-          className={`px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white ${bulkActionInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={handleBulkAction}
-          disabled={!bulkAction || selectedIds.length === 0 || bulkActionInProgress}
+          className="p-1 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 text-xs"
+          title="Show bulk actions"
+          onClick={() => setShowBulkActions(v => !v)}
         >
-          Apply
+          <svg className="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+          </svg>
+          <span className="ml-1">Bulk</span>
         </button>
-        {selectedIds.length > 0 && (
-          <span className="text-xs text-gray-400 ml-2">{selectedIds.length} selected</span>
+        {showBulkActions && (
+          <span className="text-xs text-gray-400">Bulk actions enabled</span>
         )}
       </div>
+
+      {/* Bulk actions bar (hidden by default) */}
+      {showBulkActions && (
+        <div className="flex flex-wrap items-center gap-3 mb-2">
+          <input
+            type="checkbox"
+            checked={selectAll}
+            onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
+            className="mr-2"
+            aria-label="Select all on page"
+          />
+          <span className="text-xs text-gray-400 mr-2">Select All</span>
+          <select
+            value={bulkAction}
+            onChange={e => setBulkAction(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+          >
+            <option value="">Bulk Actions</option>
+            <option value="delete">Delete Selected</option>
+            <option value="set-status-Draft">Set Status: Draft</option>
+            <option value="set-status-Ready">Set Status: Ready</option>
+            <option value="set-status-In Progress">Set Status: In Progress</option>
+            <option value="set-status-Pass">Set Status: Pass</option>
+            <option value="set-status-Fail">Set Status: Fail</option>
+            <option value="set-status-Blocked">Set Status: Blocked</option>
+          </select>
+          <button
+            className={`px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white ${bulkActionInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={handleBulkAction}
+            disabled={!bulkAction || selectedIds.length === 0 || bulkActionInProgress}
+          >
+            Apply
+          </button>
+          {selectedIds.length > 0 && (
+            <span className="text-xs text-gray-400 ml-2">{selectedIds.length} selected</span>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-16">
@@ -301,12 +321,14 @@ const TestCaseManager = () => {
               <thead>
                 <tr>
                   <th className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selectAll}
-                      onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
-                      aria-label="Select all on page"
-                    />
+                    {showBulkActions && (
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={e => handleSelectAll(e.target.checked, pagedTestCases)}
+                        aria-label="Select all on page"
+                      />
+                    )}
                   </th>
                   <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">#</th>
                   <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left w-2/5">Title</th>
@@ -453,8 +475,8 @@ const TestCaseManager = () => {
                       index={(page - 1) * pageSize + idx}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
-                      selected={selectedIds.includes(tc._id)}
-                      onSelect={handleSelectRow}
+                      selected={showBulkActions ? selectedIds.includes(tc._id) : false}
+                      onSelect={showBulkActions ? handleSelectRow : undefined}
                     />
                   )
                 )}
@@ -547,12 +569,14 @@ const TestCaseRow = ({ testCase, index, onEdit, onDelete, selected, onSelect }) 
     <>
       <tr className={`border-b border-gray-700 ${expanded ? 'bg-gray-900/70' : ''}`}>
         <td className="px-3 py-2">
-          <input
-            type="checkbox"
-            checked={!!selected}
-            onChange={e => onSelect(testCase._id, e.target.checked)}
-            aria-label="Select row"
-          />
+          {onSelect && (
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={e => onSelect(testCase._id, e.target.checked)}
+              aria-label="Select row"
+            />
+          )}
         </td>
         <td className="px-3 py-2 text-sm text-gray-400">{index + 1}</td>
         <td className="px-3 py-2 text-sm font-medium text-white w-2/5">{testCase.title || <span className="italic text-gray-500">Untitled</span>}</td>
