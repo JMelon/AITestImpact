@@ -7,6 +7,7 @@ import { getPriorityColor, getSeverityColor } from '../utils/formatters';
 const PRIORITY_OPTIONS = ['All', 'P0-Critical', 'P1-High', 'P2-Medium', 'P3-Low'];
 const SEVERITY_OPTIONS = ['All', 'Blocker', 'Critical', 'Major', 'Minor'];
 const FORMAT_OPTIONS = ['All', 'Procedural', 'Gherkin'];
+const STATE_OPTIONS = ['All', 'Draft', 'Ready', 'In Progress', 'Pass', 'Fail', 'Blocked'];
 
 const TestCaseManager = () => {
   const [testCases, setTestCases] = useState([]);
@@ -17,6 +18,7 @@ const TestCaseManager = () => {
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [severityFilter, setSeverityFilter] = useState('All');
   const [formatFilter, setFormatFilter] = useState('All');
+  const [stateFilter, setStateFilter] = useState('All');
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [deleteId, setDeleteId] = useState(null);
@@ -53,6 +55,9 @@ const TestCaseManager = () => {
     if (formatFilter !== 'All') {
       result = result.filter(tc => tc.format === formatFilter);
     }
+    if (stateFilter !== 'All') {
+      result = result.filter(tc => tc.state === stateFilter);
+    }
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(tc =>
@@ -62,7 +67,7 @@ const TestCaseManager = () => {
       );
     }
     setFiltered(result);
-  }, [search, testCases, priorityFilter, severityFilter, formatFilter]);
+  }, [search, testCases, priorityFilter, severityFilter, formatFilter, stateFilter]);
 
   // CRUD: Edit
   const handleEdit = (tc) => {
@@ -156,6 +161,13 @@ const TestCaseManager = () => {
           >
             {FORMAT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
+          <select
+            value={stateFilter}
+            onChange={e => setStateFilter(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white"
+          >
+            {STATE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
         </div>
       </div>
 
@@ -182,6 +194,7 @@ const TestCaseManager = () => {
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left whitespace-nowrap">Severity</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Tags</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Format</th>
+                <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Status</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Details</th>
                 <th className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider text-left">Actions</th>
               </tr>
@@ -191,7 +204,7 @@ const TestCaseManager = () => {
                 editId === tc._id ? (
                   <tr key={tc._id || idx} className="bg-gray-900/80 border-b border-gray-700">
                     <td className="px-3 py-2 text-sm text-gray-400 align-top">{idx + 1}</td>
-                    <td className="px-3 py-2 align-top" colSpan={7}>
+                    <td className="px-3 py-2 align-top" colSpan={8}>
                       <form
                         className="bg-gray-800 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                         onSubmit={e => {
@@ -385,6 +398,7 @@ const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
           )}
         </td>
         <td className="px-3 py-2 text-xs text-gray-300">{testCase.format || '—'}</td>
+        <td className="px-3 py-2 text-xs text-gray-300 whitespace-nowrap">{testCase.state || '—'}</td>
         <td className="px-3 py-2">
           <button
             className="text-blue-400 hover:text-blue-300 text-xs underline"
@@ -410,7 +424,7 @@ const TestCaseRow = ({ testCase, index, onEdit, onDelete }) => {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={8} className="bg-gray-900/80 px-6 py-4 border-b border-gray-800">
+          <td colSpan={9} className="bg-gray-900/80 px-6 py-4 border-b border-gray-800">
             <div className="prose prose-invert max-w-none text-sm">
               <ReactMarkdown components={{ code: CodeBlock }}>
                 {testCase.content || '_No details available_'}
