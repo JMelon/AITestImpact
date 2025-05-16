@@ -768,29 +768,29 @@ If you need a secure testing platform for professional use, please use properly 
           <ReactMarkdown
             components={{
               code: CodeBlock,
-              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 mt-0 text-white" {...props} />,
-              h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-6 mb-3 text-white" {...props} />,
-              h3: ({node, ...props}) => <h3 className="text-lg font-medium mt-5 mb-2 text-white" {...props} />,
-              ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-1" {...props} />,
-              ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-1" {...props} />,
-              li: ({node, ...props}) => <li className="text-gray-300" {...props} />,
-              p: ({node, ...props}) => <p className="mb-4 text-gray-300" {...props} />,
-              a: ({node, ...props}) => <a className="text-blue-400 hover:text-blue-300" {...props} />,
-              blockquote: ({node, ...props}) => (
-                <blockquote className="border-l-4 border-gray-700 pl-4 py-2 mb-4 text-gray-400" {...props} />
+              h1: ({node, children, ...props}) => <h1 className="text-2xl font-bold mb-4 mt-0 text-white" {...props}>{children}</h1>,
+              h2: ({node, children, ...props}) => <h2 className="text-xl font-semibold mt-6 mb-3 text-white" {...props}>{children}</h2>,
+              h3: ({node, children, ...props}) => <h3 className="text-lg font-medium mt-5 mb-2 text-white" {...props}>{children}</h3>,
+              ul: ({node, children, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-1" {...props}>{children}</ul>,
+              ol: ({node, children, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-1" {...props}>{children}</ol>,
+              li: ({node, children, ...props}) => <li className="text-gray-300" {...props}>{children}</li>,
+              p: ({node, children, ...props}) => <p className="mb-4 text-gray-300" {...props}>{children}</p>,
+              a: ({node, children, ...props}) => <a className="text-blue-400 hover:text-blue-300" {...props}>{children}</a>,
+              blockquote: ({node, children, ...props}) => (
+                <blockquote className="border-l-4 border-gray-700 pl-4 py-2 mb-4 text-gray-400" {...props}>{children}</blockquote>
               ),
-              table: ({node, ...props}) => (
+              table: ({node, children, ...props}) => (
                 <div className="overflow-x-auto mb-4">
-                  <table className="min-w-full bg-gray-800 border border-gray-700 rounded-lg" {...props} />
+                  <table className="min-w-full bg-gray-800 border border-gray-700 rounded-lg" {...props}>{children}</table>
                 </div>
               ),
-              thead: ({node, ...props}) => <thead className="bg-gray-700" {...props} />,
-              tbody: ({node, ...props}) => <tbody className="divide-y divide-gray-700" {...props} />,
-              tr: ({node, ...props}) => <tr className="hover:bg-gray-700/50" {...props} />,
-              th: ({node, ...props}) => (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" {...props} />
+              thead: ({node, children, ...props}) => <thead className="bg-gray-700" {...props}>{children}</thead>,
+              tbody: ({node, children, ...props}) => <tbody className="divide-y divide-gray-700" {...props}>{children}</tbody>,
+              tr: ({node, children, ...props}) => <tr className="hover:bg-gray-700/50" {...props}>{children}</tr>,
+              th: ({node, children, ...props}) => (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider" {...props}>{children}</th>
               ),
-              td: ({node, ...props}) => <td className="px-4 py-3 text-sm text-gray-300" {...props} />
+              td: ({node, children, ...props}) => <td className="px-4 py-3 text-sm text-gray-300" {...props}>{children}</td>
             }}
           >
             {topicContent[activeTopic] || 'Documentation content not found.'}
