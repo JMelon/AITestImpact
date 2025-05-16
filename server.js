@@ -137,10 +137,8 @@ app.post('/api/generate-test-cases', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
-    
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     if (!apiToken) {
       return res.status(400).json({ 
         error: 'OpenAI API key is required', 
@@ -148,181 +146,24 @@ app.post('/api/generate-test-cases', async (req, res) => {
       });
     }
 
-    // Convert coverage option to tag-friendly format (remove spaces)
-    const coverageTag = extendedOptions ? extendedOptions.replace(/\s+/g, '') : 'HappyPaths';
-
-    // Add special instructions for Gherkin format
-    let testConfigInfo = `
-Testing Configuration:
-- Priority: ${priority || 'P2-Medium'}
-- Severity: ${severity || 'Major'}
-- Test Type: ${testType || 'Functional'}
-- Test Coverage: ${extendedOptions || 'Happy paths'}
-
-IMPORTANT: You MUST follow these configuration parameters for ALL generated test cases. Each test case must:
-1. Reflect the specified Priority level (${priority || 'P2-Medium'})
-2. Match the indicated Severity (${severity || 'Major'})
-3. Focus on the Test Type specified (${testType || 'Functional'})
-4. Cover scenarios appropriate for the Test Coverage type (${extendedOptions || 'Happy paths'})
-
-The generated test cases will be evaluated based on how well they adhere to these parameters.`;
-
-    // Add Gherkin-specific instructions if outputType is Gherkin
-    if (outputType === 'Gherkin') {
-      testConfigInfo += `
-
-For Gherkin format, please provide a COMPLETE feature file with proper structure, including:
-1. Feature name and description at the top
-2. Background section if applicable
-3. Multiple scenarios with the following tags at the beginning of EACH scenario:
-   @${priority || 'P2-Medium'} @${severity || 'Major'} @${testType || 'Functional'} @${coverageTag}
-
-Example:
-Feature: User Authentication
-  As a user
-  I want to be able to authenticate with the system
-  So that I can access my account
-
-  Background:
-    Given the application is running
-    And I am on the login page
-
-  @P2-Medium @Major @Functional @HappyPaths
-  Scenario: User successfully logs in with valid credentials
-    When I enter valid username and password
-    And I click the login button
-    Then I should be redirected to the dashboard
-    And I should see a welcome message
-
-  @P1-High @Critical @Security @NegativePaths
-  Scenario: User cannot login with invalid credentials
-    When I enter invalid username and password
-    And I click the login button
-    Then I should see an error message
-    And I should remain on the login page
-
-Please generate at least 4-6 complete scenarios covering different aspects of the functionality.`;
-    }
-
     let messages = [];
-    
+    // --- FIX: Always use explicit JSON schema and prompt for all input types ---
     if (swaggerUrl) {
-      // For Swagger-based test case generation
+      // Swagger/OpenAPI input
       try {
-        // Fetch the Swagger JSON
         const swaggerResponse = await axios.get(swaggerUrl);
         const swaggerJson = JSON.stringify(swaggerResponse.data);
-        
-        messages = [
-          {
-            role: 'system',
-            content: `You generate Test Cases based on Swagger/OpenAPI documentation. Analyze the API endpoints, their parameters, responses, and schemas to create comprehensive test cases. Focus on functional tests, edge cases, error handling, and data validation. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-API-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
-          },
-          {
-            role: 'user',
-            content: `Generate test cases in ${outputType} format for the API defined in the following Swagger/OpenAPI documentation: ${swaggerJson}. Use language: ${language}.`
-          }
-        ];
-      } catch (error) {
-        return res.status(400).json({ error: 'Failed to fetch Swagger JSON from provided URL' });
-      }
-    } else if (imageDataArray && imageDataArray.length > 0) {
-      // For multiple images test case generation
-      const imageContentItems = imageDataArray.map((img, index) => ({
-        type: 'image_url',
-        image_url: {
-          url: img,
-        }
-      }));
-      
-      messages = [
-        {
-          role: 'system',
-          content: 'You generate Test Cases based on UI screenshots. Analyze the multiple images to identify UI elements, features, and user workflow across different screens. Then generate comprehensive test cases that cover the entire user journey shown across these screens. It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-UI-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).'
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Generate test cases in ${outputType} format for the UI shown in the ${imageDataArray.length} attached images. These images represent different screens or states of the application. Create tests that cover the workflow across these screens. Use language: ${language}. ${testConfigInfo}`
-            },
-            ...imageContentItems
-          ]
-        }
-      ];
-    } else if (imageData) {
-      // For single image test case generation (keeping for backward compatibility)
-      messages = [
-        {
-          role: 'system',
-          content: `You generate Test Cases based on UI screenshots. Analyze the image to identify UI elements, features, and potential user interactions. Then generate comprehensive test cases. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural, even if the UI suggests BDD. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-UI-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Generate test cases in ${outputType} format for the UI shown in the attached image. Use language: ${language}.`
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageData,
-              }
-            }
-          ]
-        }
-      ];
-    } else {
-      // For text-based test case generation
-      messages = [
-        {
-          role: 'system',
-          content: `You generate Test Cases. ${testConfigInfo} It is really important that you do not use Gherkin if the user asked for Procedural, even if the Acceptance Criteria is in Gherkin. For Procedural format, use this exact template:\n\n**Test Case ID:** TC-FUNC-XXX  \n**Title:** <Short, descriptive name>  \n**Objective:** <What you\'re verifying>  \n**Preconditions:**  \n- <Any setup or state required before you begin>  \n\n**Steps:**\n1) <Step description>\n2) <Step description>\n3) <...>\n\n**Expected Results:**\n- <Expected result for step 1>\n- <Expected result for step 2>\n- <...>\n\n**Postconditions:**  \n- <Any cleanup or state left after the test>\n\n---\n\nBut if the user chooses Gherkin, then write it in Gherkin (using Given, When, Then).`
-        },
-        {
-          role: 'user',
-          content: `Generate test cases in ${outputType} format for the following acceptance criteria: "${acceptanceCriteria}". Use language: ${language}.`
-        }
-      ];
-    }
 
-    // Create a system prompt that asks for structured JSON response
-    const structuredTestCasePrompt = `You generate Test Cases based on ${acceptanceCriteria ? 'acceptance criteria' : imageData || imageDataArray ? 'UI screenshots' : swaggerUrl ? 'Swagger/OpenAPI documentation' : 'requirements'}. 
-    
-Instead of returning test cases as plain text, you MUST return a structured JSON object containing an array of test cases with the following schema:
+        let systemPrompt = `
+You are an expert test engineer. Analyze the provided Swagger/OpenAPI JSON and generate comprehensive test cases for all endpoints, parameters, and responses.
+- If "Procedural" is selected, return test cases in the specified procedural JSON schema.
+- If "Gherkin" is selected, return test cases in the specified Gherkin JSON schema (see below).
+- Use the configuration: Priority: ${priority || 'P2-Medium'}, Severity: ${severity || 'Major'}, Test Type: ${testType || 'Functional'}, Test Coverage: ${extendedOptions || 'Happy paths'}.
+- Return ONLY a valid JSON object as described below, with no extra text.
 
+Gherkin JSON schema example:
 {
   "testCases": [
-    // For Procedural Test Cases
-    {
-      "format": "Procedural",
-      "testId": "TC-XXX-001",  // IMPORTANT: Each test case MUST have a unique ID with sequential numbering (001, 002, 003, etc.)
-      "title": "Test case title",
-      "objective": "What the test is verifying",
-      "preconditions": [
-        "Precondition 1",
-        "Precondition 2"
-      ],
-      "steps": [
-        {
-          "number": 1,
-          "description": "Step description",
-          "expectedResult": "Expected result for this step"
-        },
-        // More steps...
-      ],
-      "postconditions": [
-        "Postcondition 1",
-        "Postcondition 2"
-      ],
-      "priority": "${priority || 'P2-Medium'}", // MUST match user-specified priority
-      "severity": "${severity || 'Major'}", // MUST match user-specified severity
-      "category": "${swaggerUrl ? 'API' : imageData || imageDataArray ? 'UI' : 'Other'}",
-      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"] // MUST include specified test type and coverage
-    },
-    // For Gherkin Test Cases
     {
       "format": "Gherkin",
       "title": "Scenario title",
@@ -346,36 +187,241 @@ Instead of returning test cases as plain text, you MUST return a structured JSON
       "tags": ["@tag1", "@tag2"],
       "priority": "${priority || 'P2-Medium'}",
       "severity": "${severity || 'Major'}",
-      "category": "${swaggerUrl ? 'API' : imageData ? 'UI' : 'Other'}"
+      "category": "API"
     }
-  ],
-  "summary": {
-    "totalTestCases": 5,
-    "coverage": "Description of test coverage",
-    "recommendations": "Any recommendations for additional testing"
-  }
+  ]
 }
 
-IMPORTANT: Ensure each test case has a unique testId. For procedural test cases, use the format 'TC-XXX-001', 'TC-XXX-002', etc., with sequential numbering. Never reuse the same number for multiple test cases.
+Procedural JSON schema example:
+{
+  "testCases": [
+    {
+      "format": "Procedural",
+      "testId": "TC-API-001",
+      "title": "Test case title",
+      "objective": "What the test is verifying",
+      "preconditions": ["Precondition 1"],
+      "steps": [
+        { "number": 1, "description": "Step description", "expectedResult": "Expected result" }
+      ],
+      "postconditions": ["Postcondition 1"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "API",
+      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"]
+    }
+  ]
+}
 
-You MUST return ONLY the JSON object, with no additional text before or after. The JSON must be properly formatted and valid.`;
+Return only the JSON object, with no extra text.
+        `.trim();
 
-    // Replace the original system prompt with our structured JSON prompt
-    if (messages.length > 0 && messages[0].role === 'system') {
-      messages[0].content += '\n\n' + structuredTestCasePrompt;
+        messages = [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: `Generate ${outputType} test cases for the API defined in the following Swagger/OpenAPI documentation: ${swaggerJson}. Use language: ${language}.`
+          }
+        ];
+      } catch (error) {
+        return res.status(400).json({ error: 'Failed to fetch Swagger JSON from provided URL' });
+      }
+    } else if (imageDataArray && imageDataArray.length > 0) {
+      const imageContentItems = imageDataArray.map((img, index) => ({
+        type: 'image_url',
+        image_url: { url: img }
+      }));
+
+      let systemPrompt = `
+You are an expert test engineer. Analyze the attached UI screenshots (multiple images) and generate comprehensive test cases that cover all visible features, workflows, and edge cases. 
+- If "Procedural" is selected, return test cases in the specified procedural JSON schema.
+- If "Gherkin" is selected, return test cases in the specified Gherkin JSON schema (see below).
+- Each test case must be based on what is visible in the images and should not invent features not present in the UI.
+- Use the configuration: Priority: ${priority || 'P2-Medium'}, Severity: ${severity || 'Major'}, Test Type: ${testType || 'Functional'}, Test Coverage: ${extendedOptions || 'Happy paths'}.
+- Return ONLY a valid JSON object as described below, with no extra text.
+
+Gherkin JSON schema example:
+{
+  "testCases": [
+    {
+      "format": "Gherkin",
+      "title": "Scenario title",
+      "feature": "Feature name",
+      "featureDescription": "Feature description",
+      "background": "Background steps (if any)",
+      "scenarioType": "Scenario or Scenario Outline",
+      "givenSteps": [
+        "Given step 1",
+        "And step 2"
+      ],
+      "whenSteps": [
+        "When step 1",
+        "And step 2"
+      ],
+      "thenSteps": [
+        "Then step 1",
+        "And step 2"
+      ],
+      "examples": "Examples table for scenario outlines",
+      "tags": ["@tag1", "@tag2"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "UI"
+    }
+  ]
+}
+
+Procedural JSON schema example:
+{
+  "testCases": [
+    {
+      "format": "Procedural",
+      "testId": "TC-UI-001",
+      "title": "Test case title",
+      "objective": "What the test is verifying",
+      "preconditions": ["Precondition 1"],
+      "steps": [
+        { "number": 1, "description": "Step description", "expectedResult": "Expected result" }
+      ],
+      "postconditions": ["Postcondition 1"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "UI",
+      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"]
+    }
+  ]
+}
+
+Return only the JSON object, with no extra text.
+      `.trim();
+
+      messages = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Generate ${outputType} test cases for the UI shown in the attached images.`
+            },
+            ...imageContentItems
+          ]
+        }
+      ];
+    } else if (imageData) {
+      messages = [
+        {
+          role: 'system',
+          content: `You generate Test Cases based on UI screenshots. Analyze the image to identify UI elements, features, and potential user interactions. Then generate comprehensive test cases.`
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Generate test cases in ${outputType} format for the UI shown in the attached image. Use language: ${language}.`
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageData }
+            }
+          ]
+        }
+      ];
+    } else if (acceptanceCriteria) {
+      // --- FIX: Add explicit JSON schema and prompt for text input ---
+      let systemPrompt = `
+You are an expert test engineer. Analyze the provided acceptance criteria and generate comprehensive test cases.
+- If "Procedural" is selected, return test cases in the specified procedural JSON schema.
+- If "Gherkin" is selected, return test cases in the specified Gherkin JSON schema (see below).
+- Use the configuration: Priority: ${priority || 'P2-Medium'}, Severity: ${severity || 'Major'}, Test Type: ${testType || 'Functional'}, Test Coverage: ${extendedOptions || 'Happy paths'}.
+- Return ONLY a valid JSON object as described below, with no extra text.
+
+Gherkin JSON schema example:
+{
+  "testCases": [
+    {
+      "format": "Gherkin",
+      "title": "Scenario title",
+      "feature": "Feature name",
+      "featureDescription": "Feature description",
+      "background": "Background steps (if any)",
+      "scenarioType": "Scenario or Scenario Outline",
+      "givenSteps": [
+        "Given step 1",
+        "And step 2"
+      ],
+      "whenSteps": [
+        "When step 1",
+        "And step 2"
+      ],
+      "thenSteps": [
+        "Then step 1",
+        "And step 2"
+      ],
+      "examples": "Examples table for scenario outlines",
+      "tags": ["@tag1", "@tag2"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "Functional"
+    }
+  ]
+}
+
+Procedural JSON schema example:
+{
+  "testCases": [
+    {
+      "format": "Procedural",
+      "testId": "TC-FUNC-001",
+      "title": "Test case title",
+      "objective": "What the test is verifying",
+      "preconditions": ["Precondition 1"],
+      "steps": [
+        { "number": 1, "description": "Step description", "expectedResult": "Expected result" }
+      ],
+      "postconditions": ["Postcondition 1"],
+      "priority": "${priority || 'P2-Medium'}",
+      "severity": "${severity || 'Major'}",
+      "category": "Functional",
+      "tags": ["${testType || 'Functional'}", "${extendedOptions || 'Happy paths'}"]
+    }
+  ]
+}
+
+Return only the JSON object, with no extra text.
+      `.trim();
+
+      messages = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: `Generate ${outputType} test cases for the following acceptance criteria: "${acceptanceCriteria}". Use language: ${language}.`
+        }
+      ];
+    } else {
+      return res.status(400).json({ error: 'Invalid input for test case generation' });
     }
 
-    // Add a format instruction to the user message
-    if (messages.length > 1 && messages[1].role === 'user') {
-      messages[1].content += '\n\nPlease return the test cases in the structured JSON format as specified.';
+    // ...existing code for adding JSON object instruction if not present...
+    if (messages.length > 0 && messages[0].role === 'system' && !messages[0].content.includes('Return ONLY a valid JSON object')) {
+      messages[0].content += `
+Return ONLY a valid JSON object as described above, with no extra text.`;
     }
 
-    console.log('Sending request to OpenAI API...');
-    console.log('Using model:', modelName);
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: modelName,
       messages: messages,
-      response_format: { type: "json_object" }, // Request JSON format explicitly
+      response_format: { type: "json_object" },
       temperature: 0.7,
       max_tokens: 4000,
     }, {
@@ -386,70 +432,17 @@ You MUST return ONLY the JSON object, with no additional text before or after. T
       timeout: 60000
     });
 
-    // Add detailed logging of the OpenAI response
-    console.log('OpenAI API Response Status:', response.status);
-    console.log('OpenAI Response Headers:', response.headers);
-    
-    // Process and return the structured response
     let responseData = response.data;
-    
-    // Check for duplicate testIds and fix them if needed
     if (responseData.choices && responseData.choices[0] && responseData.choices[0].message) {
       try {
         let content = responseData.choices[0].message.content;
         let jsonData = typeof content === 'string' ? JSON.parse(content) : content;
-        
-        if (jsonData.testCases && Array.isArray(jsonData.testCases)) {
-          // Fix duplicate IDs if they exist
-          const usedIds = new Set();
-          let needsRetry = false;
-          
-          jsonData.testCases.forEach((tc, index) => {
-            if (tc.testId && usedIds.has(tc.testId)) {
-              console.log(`Duplicate test ID detected: ${tc.testId}`);
-              needsRetry = true;
-            }
-            usedIds.add(tc.testId);
-          });
-          
-          if (needsRetry) {
-            console.log("Detected duplicate test case IDs. Requesting a fix from OpenAI...");
-            
-            // Make a follow-up request to fix the numbering
-            const fixResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-              model: modelName, // Use the same model here
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are tasked with fixing the numbering of test cases. Each test case must have a unique testId.'
-                },
-                {
-                  role: 'user',
-                  content: `The following JSON contains test cases with duplicate IDs. Please fix the numbering to ensure each test case has a unique sequential ID (001, 002, 003, etc.):
-                  
-${JSON.stringify(jsonData, null, 2)}
-
-Return only the fixed JSON object with no additional text.`
-                }
-              ],
-              response_format: { type: "json_object" },
-              temperature: 0.7,
-            }, {
-              headers: {
-                'Authorization': `Bearer ${apiToken}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            // Replace the original response data with the fixed data
-            responseData = fixResponse.data;
-          }
-        }
+        responseData = { ...responseData, ...jsonData };
       } catch (err) {
-        console.error("Error processing or fixing test case IDs:", err);
+        responseData = { ...responseData, rawContent: responseData.choices[0].message.content };
       }
     }
-    
+
     return res.json(responseData);
   } catch (error) {
     console.error('Error while calling the OpenAI API:', error.response?.data || error.message);
