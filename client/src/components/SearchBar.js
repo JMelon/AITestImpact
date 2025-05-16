@@ -129,7 +129,10 @@ const SearchBar = ({ onResultClick }) => {
       </div>
 
       {showResults && (
-        <div className="absolute mt-2 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div
+          className="absolute mt-2 left-0 right-0 sm:left-auto sm:right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+          style={{ minWidth: '20rem', width: '36rem', maxWidth: '100vw' }}
+        >
           {isLoading ? (
             <div className="p-4 text-center text-gray-400">
               <svg className="animate-spin h-5 w-5 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
