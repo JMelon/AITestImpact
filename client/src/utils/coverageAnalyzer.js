@@ -18,17 +18,80 @@ export const analyzeCoverage = async ({ testCases, requirements, inputType, apiT
     }
     
     // For AI-powered detailed analysis:
-    // Format test cases content for API consumption
-    const formattedTestCases = testCases.map(tc => tc.content).join('\n\n');
+    // Format test cases for API consumption - handle different data structures
+    let formattedTestCases;
+    
+    if (typeof testCases === 'string') {
+      // Already a string, use as-is
+      formattedTestCases = testCases;
+    } else if (Array.isArray(testCases)) {
+      // Process array of test case objects
+      formattedTestCases = testCases.map(tc => {
+        // If test case has content property, use that
+        if (tc.content) return tc.content;
+        
+        // Otherwise try to create a readable format from the object
+        if (tc.title) {
+          let content = `Test Case: ${tc.title}\n`;
+          if (tc.format === 'Procedural' && tc.structuredData) {
+            content += `Objective: ${tc.structuredData.objective || 'N/A'}\n`;
+            // Add steps if available
+            if (tc.structuredData.steps && tc.structuredData.steps.length > 0) {
+              content += "Steps:\n";
+              tc.structuredData.steps.forEach((step, idx) => {
+                content += `${idx + 1}. ${step.description}\n`;
+              });
+            }
+          } else if (tc.format === 'Gherkin' && tc.structuredData) {
+            // Add Gherkin format
+            content += "Gherkin:\n";
+            if (tc.structuredData.givenSteps) {
+              tc.structuredData.givenSteps.forEach(step => content += `Given ${step}\n`);
+            }
+            if (tc.structuredData.whenSteps) {
+              tc.structuredData.whenSteps.forEach(step => content += `When ${step}\n`);
+            }
+            if (tc.structuredData.thenSteps) {
+              tc.structuredData.thenSteps.forEach(step => content += `Then ${step}\n`);
+            }
+          }
+          return content;
+        }
+        
+        // Last resort: stringify the object but exclude large nested objects
+        return JSON.stringify({
+          title: tc.title || 'Unknown Test Case',
+          format: tc.format || 'Unknown Format',
+          priority: tc.priority,
+          severity: tc.severity,
+          tags: tc.tags
+        });
+      }).join('\n\n');
+    } else {
+      // If none of the above, try to stringify the object
+      try {
+        formattedTestCases = JSON.stringify(testCases);
+      } catch (e) {
+        console.error('Failed to stringify test cases:', e);
+        formattedTestCases = 'Unable to process test cases format';
+      }
+    }
+    
+    // Make sure requirements is a string
+    const processedRequirements = typeof requirements === 'string' 
+      ? requirements 
+      : JSON.stringify(requirements);
+    
+    console.log('Sending coverage analysis request with type:', inputType);
     
     const response = await axios.post('http://localhost:5000/api/analyze-test-coverage', {
       testCases: formattedTestCases,
-      requirements,
+      requirements: processedRequirements,
       inputType
     }, {
       headers: {
         'X-OpenAI-Token': apiToken,
-        'X-OpenAI-Model': modelName || 'gpt-4.1-2025-04-14' // Add model name with default
+        'X-OpenAI-Model': modelName || 'gpt-4.1-2025-04-14'
       }
     });
     
@@ -38,8 +101,9 @@ export const analyzeCoverage = async ({ testCases, requirements, inputType, apiT
     return {
       coverageScore: null,
       coverageDetails: [],
-      error: 'Failed to analyze coverage',
-      missingAreas: []
+      error: 'Failed to analyze coverage: ' + (error.response?.data?.error || error.message),
+      missingAreas: [],
+      needsAiAnalysis: true // Indicate that AI analysis is needed but failed
     };
   }
 };

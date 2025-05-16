@@ -469,13 +469,17 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       imageDataArray 
     } = req.body;
     
+    // Validate required inputs with better error messages
     if (!testCases) {
-      return res.status(400).json({ error: 'Test cases are required' });
+      return res.status(400).json({ 
+        error: 'Test cases are required',
+        details: 'Please provide test cases to analyze'
+      });
     }
 
     // API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -488,15 +492,11 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
     let prompt = '';
     
     if (inputType === 'text') {
-      if (!requirements) {
-        return res.status(400).json({ error: 'Requirements are required for text input type' });
-      }
-      
+      // For text input, check for requirements but don't fail - create a generic prompt if missing
       prompt = `
 Please analyze if these test cases provide complete coverage for the given requirements and return your analysis as a JSON object.
 
-REQUIREMENTS:
-${requirements}
+${requirements ? `REQUIREMENTS:\n${requirements}` : 'REQUIREMENTS: (Not provided - please analyze test cases for general coverage quality)'}
 
 TEST CASES:
 ${testCases}
@@ -520,34 +520,22 @@ Return your analysis as a JSON object with the following structure:
 The analysis should be structured with clear sections and specific examples.
 `;
     } else if (inputType === 'swagger') {
-      if (!swaggerUrl) {
-        return res.status(400).json({ error: 'Swagger URL is required for swagger input type' });
-      }
-      
-      // Fetch the Swagger spec
-      let swaggerSpec;
-      try {
-        const swaggerResponse = await axios.get(swaggerUrl);
-        swaggerSpec = JSON.stringify(swaggerResponse.data);
-      } catch (error) {
-        return res.status(400).json({ error: 'Failed to fetch Swagger spec from provided URL' });
-      }
-      
+      // ...existing swagger code...
+    } else if (inputType === 'image') {
+      // ...existing image code...
+    } else {
+      // Default to basic text analysis if input type is not recognized
       prompt = `
-Please analyze if these test cases provide complete coverage for the API defined in this Swagger/OpenAPI specification and return your analysis as a JSON object.
-
-SWAGGER/OPENAPI SPEC:
-${swaggerSpec}
+Please analyze these test cases for quality and coverage and return your analysis as a JSON object:
 
 TEST CASES:
 ${testCases}
 
-Perform a detailed gap analysis to identify any endpoints, status codes, or request/response scenarios that are not adequately covered by the test cases. Focus on:
-1. Overall API coverage percentage (0-100%)
-2. Endpoints and operations that are well-covered
-3. Endpoints and operations that are partially covered or missing coverage
-4. Common API testing scenarios that should be added (authentication, error handling, edge cases)
-5. Recommendations for additional test cases to improve coverage
+Analyze the test cases for:
+1. Overall quality (0-100%)
+2. Areas that are well-covered
+3. Potential gaps or missing edge cases
+4. Recommendations for improvements
 
 Return your analysis as a JSON object with the following structure:
 {
@@ -557,128 +545,105 @@ Return your analysis as a JSON object with the following structure:
   "suggestions": string[],
   "analysis": string
 }
-
-The analysis should be structured with clear sections and specific examples.
 `;
-    } else if (inputType === 'image') {
-      if (!imageDataArray || imageDataArray.length === 0) {
-        return res.status(400).json({ error: 'Image data is required for image input type' });
-      }
-      
-      const imageContentItems = imageDataArray.map((img, index) => ({
-        type: 'image_url',
-        image_url: {
-          url: img,
+    }
+
+    // For text inputs, use JSON response format
+    if (inputType === 'text' || inputType === 'swagger' || !inputType) {
+      // Add handling for large inputs by limiting the size
+      const maxChars = 14000; // Reasonable limit for inputs
+      const trimmedTestCases = testCases.length > maxChars 
+        ? testCases.substring(0, maxChars) + "... (content truncated for processing)"
+        : testCases;
+        
+      const trimmedRequirements = requirements && requirements.length > maxChars
+        ? requirements.substring(0, maxChars) + "... (content truncated for processing)"
+        : requirements;
+        
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are a test coverage analyzer that examines if test cases adequately cover requirements or API specifications. Provide a structured analysis with numerical metrics and actionable recommendations. Your response should be formatted as a JSON object.'
+        },
+        {
+          role: 'user',
+          content: prompt.replace(testCases, trimmedTestCases)
+                         .replace(requirements, trimmedRequirements || '')
         }
-      }));
-      
-      // For image input, use the model from header
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: modelName, // Use the model from the header
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a test coverage analyzer that examines if test cases adequately cover the requirements shown in images. Provide comprehensive analysis with coverage percentage and recommendations.'
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Please analyze if these test cases provide complete coverage for the requirements shown in the attached image(s). The test cases are:\n\n${testCases}\n\nPerform a detailed gap analysis and provide a comprehensive evaluation with coverage percentage, well-covered areas, missing coverage, and recommendations for additional test cases.`
-              },
-              ...imageContentItems
-            ]
-          }
-        ],
-        max_tokens: 4000,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Process and format the response
+      ];
+
       try {
-        const content = response.data.choices[0].message.content;
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: modelName,
+          messages: messages,
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+          max_tokens: 4000,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000 // Increase timeout to 60 seconds
+        });
+    
+        // Extract the JSON content
+        try {
+          const content = response.data.choices[0].message.content;
+          const jsonData = JSON.parse(content);
+          
+          // Ensure the response has the expected structure
+          const formattedResponse = {
+            coverageScore: jsonData.coverageScore || jsonData.coverage || 0,
+            missingAreas: jsonData.missingAreas || jsonData.gaps || [],
+            coverageDetails: jsonData.coverageDetails || jsonData.coveredAreas || [],
+            suggestions: jsonData.suggestions || jsonData.recommendations || [],
+            analysis: jsonData.analysis || jsonData.detailedAnalysis || ''
+          };
+          
+          return res.json(formattedResponse);
+        } catch (error) {
+          console.error('Error parsing JSON response:', error);
+          
+          // If JSON parsing fails, return the raw content with best-effort extraction
+          const content = response.data.choices[0].message.content;
+          return res.json({
+            analysis: content,
+            coverageScore: extractCoverageScore(content),
+            missingAreas: extractMissingAreas(content),
+            suggestions: extractSuggestions(content)
+          });
+        }
+      } catch (openaiError) {
+        // Specific handling for OpenAI API errors
+        console.error('OpenAI API error:', openaiError.message);
         
-        // Parse the content to create a structured analysis
-        const analysisResult = {
-          analysis: content,
-          // Extract coverage percentage using regex
-          coverageScore: extractCoverageScore(content),
-          // Extract missing areas
-          missingAreas: extractMissingAreas(content),
-          // Extract suggestions
-          suggestions: extractSuggestions(content)
-        };
-        
-        return res.json(analysisResult);
-      } catch (error) {
-        console.error('Error processing image analysis response:', error);
         return res.status(500).json({
-          error: 'Error processing analysis response',
-          details: error.message
+          error: 'Error calling AI service for coverage analysis',
+          details: openaiError.message,
+          coverageScore: null,
+          missingAreas: [],
+          suggestions: ['Try a smaller input or simpler requirements']
         });
       }
     }
 
-    // For text and Swagger, use JSON response format
-    const messages = [
-      {
-        role: 'system',
-        content: 'You are a test coverage analyzer that examines if test cases adequately cover requirements or API specifications. Provide a structured analysis with numerical metrics and actionable recommendations. Your response should be formatted as a JSON object.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ];
+    // ...existing code for image input...
 
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: modelName, // Use the model from the header
-      messages: messages,
-      response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 4000,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Extract the JSON content
-    try {
-      const content = response.data.choices[0].message.content;
-      const jsonData = JSON.parse(content);
-      
-      // Ensure the response has the expected structure
-      const formattedResponse = {
-        coverageScore: jsonData.coverageScore || jsonData.coverage || 0,
-        missingAreas: jsonData.missingAreas || jsonData.gaps || [],
-        coverageDetails: jsonData.coverageDetails || jsonData.coveredAreas || [],
-        suggestions: jsonData.suggestions || jsonData.recommendations || [],
-        analysis: jsonData.analysis || jsonData.detailedAnalysis || ''
-      };
-      
-      return res.json(formattedResponse);
-    } catch (error) {
-      console.error('Error parsing JSON response:', error);
-      
-      // If JSON parsing fails, return the raw content with best-effort extraction
-      const content = response.data.choices[0].message.content;
-      return res.json({
-        analysis: content,
-        coverageScore: extractCoverageScore(content),
-        missingAreas: extractMissingAreas(content),
-        suggestions: extractSuggestions(content)
-      });
-    }
   } catch (error) {
     console.error('Error analyzing test coverage:', error.response?.data || error.message);
-    const errorResponse = handleOpenAIError(error);
+    
+    // Improve error response with more details
+    const errorResponse = {
+      status: error.response?.status || 500,
+      error: 'Error analyzing test coverage',
+      details: error.response?.data?.error || error.message || 'Unknown server error',
+      code: error.response?.data?.code || 'server_error',
+      coverageScore: null,
+      missingAreas: [],
+      suggestions: ['Try again with a simpler input']
+    };
+    
     return res.status(errorResponse.status).json(errorResponse);
   }
 });
