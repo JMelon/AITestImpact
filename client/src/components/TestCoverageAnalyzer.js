@@ -506,9 +506,16 @@ Expected Result: System should display an error message indicating the email is 
               <div className="mt-6 pt-6 border-t border-gray-700">
                 <h4 className="text-lg font-medium mb-3">Detailed Analysis:</h4>
                 <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown components={{ code: CodeBlock }}>
-                    {coverageResults.analysis}
-                  </ReactMarkdown>
+                  {/* FIX: Only render ReactMarkdown if analysis is a string */}
+                  {typeof coverageResults.analysis === 'string' ? (
+                    <ReactMarkdown components={{ code: CodeBlock }}>
+                      {coverageResults.analysis}
+                    </ReactMarkdown>
+                  ) : (
+                    <pre className="text-red-400 bg-gray-900 p-2 rounded">
+                      {JSON.stringify(coverageResults.analysis, null, 2)}
+                    </pre>
+                  )}
                 </div>
               </div>
             )}

@@ -462,7 +462,6 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       imageDataArray 
     } = req.body;
     
-    // Validate required inputs with better error messages
     if (!testCases) {
       return res.status(400).json({ 
         error: 'Test cases are required',
@@ -470,10 +469,8 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       });
     }
 
-    // API token and model from request header
     const apiToken = req.headers['x-openai-token'];
     const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
-    
     if (!apiToken) {
       return res.status(400).json({ 
         error: 'OpenAI API key is required', 
@@ -481,11 +478,9 @@ app.post('/api/analyze-test-coverage', async (req, res) => {
       });
     }
 
-    // Format prompt based on input type
     let prompt = '';
-    
+
     if (inputType === 'text') {
-      // For text input, check for requirements but don't fail - create a generic prompt if missing
       prompt = `
 Please analyze if these test cases provide complete coverage for the given requirements and return your analysis as a JSON object.
 
@@ -513,11 +508,53 @@ Return your analysis as a JSON object with the following structure:
 The analysis should be structured with clear sections and specific examples.
 `;
     } else if (inputType === 'swagger') {
-      // ...existing swagger code...
+      if (!swaggerUrl) {
+        return res.status(400).json({ error: 'Swagger URL is required for swagger input type' });
+      }
+      try {
+        const swaggerResponse = await axios.get(swaggerUrl);
+        const swaggerJson = JSON.stringify(swaggerResponse.data);
+
+        prompt = `
+You are a test coverage analyzer. Analyze the following Swagger/OpenAPI specification and the provided test cases to determine coverage.
+- Identify which endpoints, parameters, and responses are covered by the test cases.
+- Identify any endpoints or scenarios that are not covered.
+- Return your analysis as a JSON object with the following structure:
+{
+  "coverageScore": number,
+  "missingAreas": [{"description": string, "importance": "high"|"medium"|"low"}],
+  "coverageDetails": [{"area": string, "covered": boolean, "testCases": string[]}],
+  "suggestions": string[],
+  "analysis": string
+}
+
+SWAGGER_SPEC:
+${swaggerJson}
+
+TEST CASES:
+${testCases}
+
+Provide a detailed analysis of coverage, missing areas, and actionable suggestions.
+        `.trim();
+      } catch (err) {
+        return res.status(400).json({ error: 'Failed to fetch Swagger JSON from provided URL' });
+      }
     } else if (inputType === 'image') {
-      // ...existing image code...
+      prompt = `
+You are a test coverage analyzer that examines if the provided test cases adequately cover the requirements shown in the attached UI screenshots.
+- Analyze the screenshots (provided as images) and the test cases (provided as text or structured format).
+- Identify which requirements or UI features are covered and which are missing.
+- Return your analysis as a JSON object with the following structure:
+{
+  "coverageScore": number,
+  "missingAreas": [{"description": string, "importance": "high"|"medium"|"low"}],
+  "coverageDetails": [{"area": string, "covered": boolean, "testCases": string[]}],
+  "suggestions": string[],
+  "analysis": string
+}
+If you cannot analyze the images, provide your best effort based on the test cases and mention the limitation in the analysis.
+      `.trim();
     } else {
-      // Default to basic text analysis if input type is not recognized
       prompt = `
 Please analyze these test cases for quality and coverage and return your analysis as a JSON object:
 
@@ -541,29 +578,44 @@ Return your analysis as a JSON object with the following structure:
 `;
     }
 
-    // For text inputs, use JSON response format
-    if (inputType === 'text' || inputType === 'swagger' || !inputType) {
-      // Add handling for large inputs by limiting the size
-      const maxChars = 14000; // Reasonable limit for inputs
+    if (inputType === 'text' || inputType === 'swagger' || inputType === 'image' || !inputType) {
+      const maxChars = 14000;
       const trimmedTestCases = testCases.length > maxChars 
         ? testCases.substring(0, maxChars) + "... (content truncated for processing)"
         : testCases;
-        
       const trimmedRequirements = requirements && requirements.length > maxChars
         ? requirements.substring(0, maxChars) + "... (content truncated for processing)"
         : requirements;
-        
-      const messages = [
+
+      let messages = [
         {
           role: 'system',
-          content: 'You are a test coverage analyzer that examines if test cases adequately cover requirements or API specifications. Provide a structured analysis with numerical metrics and actionable recommendations. Your response should be formatted as a JSON object.'
-        },
-        {
+          content: 'You are a test coverage analyzer that examines if test cases adequately cover requirements, API specifications, or UI specifications. Provide a structured analysis with numerical metrics and actionable recommendations. Your response should be formatted as a JSON object.'
+        }
+      ];
+
+      if (inputType === 'image' && Array.isArray(imageDataArray) && imageDataArray.length > 0) {
+        const imageContentItems = imageDataArray.map((img, idx) => ({
+          type: 'image_url',
+          image_url: { url: img }
+        }));
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `${prompt}\n\nTEST CASES:\n${trimmedTestCases}`
+            },
+            ...imageContentItems
+          ]
+        });
+      } else {
+        messages.push({
           role: 'user',
           content: prompt.replace(testCases, trimmedTestCases)
                          .replace(requirements, trimmedRequirements || '')
-        }
-      ];
+        });
+      }
 
       try {
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -577,15 +629,13 @@ Return your analysis as a JSON object with the following structure:
             'Authorization': `Bearer ${apiToken}`,
             'Content-Type': 'application/json'
           },
-          timeout: 60000 // Increase timeout to 60 seconds
+          timeout: 60000
         });
-    
-        // Extract the JSON content
+
         try {
           const content = response.data.choices[0].message.content;
           const jsonData = JSON.parse(content);
-          
-          // Ensure the response has the expected structure
+
           const formattedResponse = {
             coverageScore: jsonData.coverageScore || jsonData.coverage || 0,
             missingAreas: jsonData.missingAreas || jsonData.gaps || [],
@@ -593,12 +643,9 @@ Return your analysis as a JSON object with the following structure:
             suggestions: jsonData.suggestions || jsonData.recommendations || [],
             analysis: jsonData.analysis || jsonData.detailedAnalysis || ''
           };
-          
+
           return res.json(formattedResponse);
         } catch (error) {
-          console.error('Error parsing JSON response:', error);
-          
-          // If JSON parsing fails, return the raw content with best-effort extraction
           const content = response.data.choices[0].message.content;
           return res.json({
             analysis: content,
@@ -608,9 +655,6 @@ Return your analysis as a JSON object with the following structure:
           });
         }
       } catch (openaiError) {
-        // Specific handling for OpenAI API errors
-        console.error('OpenAI API error:', openaiError.message);
-        
         return res.status(500).json({
           error: 'Error calling AI service for coverage analysis',
           details: openaiError.message,
@@ -620,13 +664,8 @@ Return your analysis as a JSON object with the following structure:
         });
       }
     }
-
-    // ...existing code for image input...
-
   } catch (error) {
     console.error('Error analyzing test coverage:', error.response?.data || error.message);
-    
-    // Improve error response with more details
     const errorResponse = {
       status: error.response?.status || 500,
       error: 'Error analyzing test coverage',
@@ -636,14 +675,12 @@ Return your analysis as a JSON object with the following structure:
       missingAreas: [],
       suggestions: ['Try again with a simpler input']
     };
-    
     return res.status(errorResponse.status).json(errorResponse);
   }
 });
 
 // Helper functions for extracting data from text responses
 function extractCoverageScore(text) {
-  // Try to find percentage patterns like "75%" or "coverage: 80"
   const percentageMatch = text.match(/(\d{1,3})%/);
   if (percentageMatch) return parseInt(percentageMatch[1]);
   
@@ -655,13 +692,10 @@ function extractCoverageScore(text) {
 
 function extractMissingAreas(text) {
   const missingAreas = [];
-  
-  // Look for sections that might indicate missing coverage
   const sections = text.split(/#+\s+/);
   
   for (const section of sections) {
     if (/missing|gap|not covered|lacking/i.test(section)) {
-      // Extract bullet points
       const bullets = section.split(/\n-\s+/).slice(1);
       bullets.forEach(bullet => {
         if (bullet.trim()) {
@@ -689,13 +723,10 @@ function determinImportance(text) {
 
 function extractSuggestions(text) {
   const suggestions = [];
-  
-  // Look for recommendation sections
   const sections = text.split(/#+\s+/);
   
   for (const section of sections) {
     if (/recommend|suggestion|improve|enhance/i.test(section)) {
-      // Extract bullet points
       const bullets = section.split(/\n-\s+/).slice(1);
       bullets.forEach(bullet => {
         if (bullet.trim()) {
@@ -717,9 +748,8 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -731,7 +761,7 @@ app.post('/api/generate-quality-assessment', async (req, res) => {
     const unselectedPractices = getUnselectedPractices(selectedPractices);
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: modelName, // Use the model from the header
+      model: modelName,
       messages: [
         {
           role: 'system',
@@ -766,9 +796,8 @@ app.post('/api/generate-test-code', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -778,7 +807,7 @@ app.post('/api/generate-test-code', async (req, res) => {
     }
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: modelName, // Use the model from the header
+      model: modelName,
       messages: [
         {
           role: 'system',
@@ -813,9 +842,8 @@ app.post('/api/refine-test-cases', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -835,21 +863,18 @@ app.post('/api/refine-test-cases', async (req, res) => {
       }
     ];
 
-    // Add structured JSON requirement to the system message
     if (messages.length > 0 && messages[0].role === 'system') {
       messages[0].content += '\n\nYou MUST return your response as a structured JSON object with the same schema as the input test cases.';
     }
 
-    // Add a format instruction to the user message
     if (messages.length > 1 && messages[1].role === 'user') {
       messages[1].content += '\n\nPlease return the refined test cases in structured JSON format.';
     }
 
-    console.log('Sending request to OpenAI API for test case refinement...');
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: modelName, // Use the model from the header
+      model: modelName,
       messages: messages,
-      response_format: { type: "json_object" }, // Request JSON format explicitly
+      response_format: { type: "json_object" },
       temperature: 0.7,
       max_tokens: 4000,
     }, {
@@ -877,9 +902,8 @@ app.post('/api/review-requirements', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Get API token and model from request header
     const apiToken = req.headers['x-openai-token'];
-    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL; // Default if not provided
+    const modelName = req.headers['x-openai-model'] || DEFAULT_MODEL;
     
     if (!apiToken) {
       return res.status(400).json({ 
@@ -888,7 +912,6 @@ app.post('/api/review-requirements', async (req, res) => {
       });
     }
 
-    // Always use comprehensive analysis with all focus areas
     const systemPrompt = `You are an expert requirements analyst. Review the provided requirements for:
 
 - Contradictions and inconsistencies
@@ -915,7 +938,7 @@ Provide a structured analysis with clear categories of findings, specific refere
     ];
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: modelName, // Use the model from the header
+      model: modelName,
       messages: messages
     }, {
       headers: {
@@ -932,7 +955,6 @@ Provide a structured analysis with clear categories of findings, specific refere
   }
 });
 
-// Helper function to determine unselected practices
 function getUnselectedPractices(selectedPractices) {
   const allPractices = [
     "Unit tests", "Integration tests", "Contract tests", "End-to-end tests", 
