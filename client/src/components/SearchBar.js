@@ -8,10 +8,6 @@ const SearchBar = ({ onResultClick }) => {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef(null);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
   // Wrap handleSearchSubmit in useCallback to prevent recreation on every render
   const handleSearchSubmit = useCallback(async () => {
     if (!searchTerm.trim()) {
