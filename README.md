@@ -50,7 +50,7 @@ docker-compose up -d
 Copy `.env` and adjust as needed:
 ```
 ENABLE_MONGODB=true
-MONGODB_URI=mongodb://admin:password@localhost:27017/testcases?authSource=admin
+MONGODB_URI=mongodb://{username}:{password}@localhost:27017/testcases?authSource=admin
 PORT=5000
 NODE_ENV=development
 ```
