@@ -20,3 +20,5 @@ yarn-error.log*
 
 # misc
 .DS_Store
+
+_README_.MD
